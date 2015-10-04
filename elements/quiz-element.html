@@ -1,0 +1,131 @@
+<dom-module id="quiz-element">
+  <template>
+    <style is="custom-style" include="app-themes"></style>
+    <style>
+    :host {
+      overflow-x: hidden;
+    }
+
+    #placeholder {
+      height: 100%;
+      width: 100%;
+      background-color: var(--paper-grey-300);
+    }
+
+    paper-toolbar {
+      background-color: transparent;
+    }
+
+    #quizPageSelector {
+      /*height: calc(100vh - 64px);*/
+    }
+
+    @media (max-width: 600px) {
+      paper-toolbar {
+        display: none;
+      }
+    }
+    </style>
+    <iron-media-query query="(max-width: 600px)" query-matches="{{wide}}"></iron-media-query>
+
+    <div id="placeholder" class$="[[_concatClass('layout horizontal fit', quiz.theme)]]"></div>
+    <div class="layout vertical fit">
+      <paper-toolbar>
+        <paper-icon-button on-tap="_close" icon="arrow-back"></paper-icon-button>
+      </paper-toolbar>
+
+      <neon-animated-pages id="quizPageSelector" selected="{{selected}}" class="flex">
+        <quiz-front-page id="frontPage" quiz="{{quiz}}" wide="[[wide]]" on-start="_next" on-close-quiz="_close"></quiz-front-page>
+        <question-list quiz="{{quiz}}" on-end="_next" wide="[[wide]]" on-finish="_next" on-close-quiz="_close"></question-list>
+        <quiz-results-page quiz="{{quiz}}" wide="[[wide]]" on-close-quiz="_close"></quiz-results-page>
+      </neon-animated-pages>
+    </div>
+  </template>
+
+  <script>
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'quiz-element',
+
+      behaviors: [
+        Polymer.NeonSharedElementAnimatableBehavior,
+        Polymer.NeonAnimationRunnerBehavior
+      ],
+
+      properties: {
+        quiz: {
+          type: Object,
+          notify: true,
+          observer: 'quizChanged'
+        },
+
+        animationConfig: {
+          type: Object,
+          value: function() {
+            return {
+              'entry': [{
+                name: 'ripple-animation',
+                id: 'ripple',
+                toPage: this
+              }],
+              'exit': [{
+                name: 'fade-out-animation',
+                node: this.$.placeholder
+              }, {
+                name: 'transform-animation',
+                transformFrom: 'none',
+                transformTo: 'translate(0px,-200vh) scale(0.9,1)',
+                node: this.$$('paper-toolbar')
+              }]
+            };
+          }
+        },
+
+        sharedElements: {
+          type: Object,
+          value: function() {
+            return {
+              'ripple': this.$.placeholder
+            };
+          }
+        }
+      },
+
+      quizChanged: function() {
+        if (this.quiz) {
+          this.$.quizPageSelector.selected = 0;
+          this.$.frontPage.show();
+        }
+      },
+
+      _close: function() {
+        if (this.$.quizPageSelector.selectedItem.exit()) {
+          this.fire('close');
+
+          var _this = this;
+          setTimeout(function() {
+            _this.$.quizPageSelector.selected = 0;
+            _this.quiz = undefined;
+          }, 200);
+        }
+      },
+
+      _next: function() {
+        this.$.quizPageSelector.selectNext();
+        console.log(this.$.quizPageSelector.selectedItem);
+      },
+
+      _getCategoryIcon: function(name) {
+        return 'category-icons:' + name;
+      },
+
+      _concatClass: function(classess, newClass) {
+        return classess + ' ' + newClass;
+      }
+
+    });
+  })();
+  </script>
+</dom-module>

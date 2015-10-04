@@ -1,0 +1,178 @@
+<dom-module id="category-list">
+  <template>
+    <style is="custom-style" include="app-themes"></style>
+
+    <paper-scroll-header-panel condenses keep-condensed-header mode="waterfall-tall" on-paper-header-transform="animateTitle">
+
+      <!-- Main Toolbar -->
+      <paper-toolbar id="mainToolbar" class="tall">
+        <span class="flex"></span>
+
+        <!-- Application name -->
+        <div class="middle middle-container center horizontal layout">
+          <div class="app-name">Quiz App</div>
+        </div>
+
+        <!-- Application sub title -->
+        <div class="bottom bottom-container center horizontal layout">
+          <div class="bottom-title paper-font-subhead">Question/Answer Application built with Polymer!</div>
+        </div>
+
+      </paper-toolbar>
+
+      <div class="layout horizontal wrap">
+
+        <template id="content" is="dom-repeat" items="[[items]]">
+
+          <paper-card elevation="1" on-tap="_onTap" class$="{{_concatClass('tile flex layout vertical', item.theme)}}" activityId$="[[item.activityId]]">
+            <div class="tileContainer layout fit" id="[[item.activityId]]" style="z-index: 1"> </div>
+            <div class="icon layout horizontal center-justified  center flex">
+              <iron-icon icon="{{_getCategoryIcon(item.icon)}}"></iron-icon>
+            </div>
+            <div class="tile-footer layout horizontal center">
+              <div class="paper-font-body1 layout flex center center-justified">{{item.name}}</div>
+              <iron-icon icon="av:play-arrow"></iron-icon>
+            </div>
+          </paper-card>
+        </template>
+
+      </div>
+
+    </paper-scroll-header-panel>
+  </template>
+
+  <script>
+  (function() {
+    Polymer({
+
+      is: 'category-list',
+
+      behaviors: [
+        Polymer.NeonSharedElementAnimatableBehavior,
+        Polymer.NeonAnimationRunnerBehavior
+      ],
+
+      properties: {
+        items: {
+          type: Array,
+          notify: true,
+          observer: '_itemsChanged'
+        },
+
+        category: {
+          type: String
+        },
+
+        animationConfig: {
+          type: Object,
+          value: function() {
+            return {
+              'entry': [{
+                name: 'cascaded-animation',
+                animation: 'transform-animation',
+                transformFrom: 'translateY(150%)',
+                transformTo: 'none'
+              }, {
+                name: 'slide-down-animation',
+                node: this.$.mainToolbar,
+              }],
+              'exit': [{
+                name: 'cascaded-animation',
+                animation: 'scale-down-animation'
+              }, {
+                name: 'hero-animation',
+                id: 'hero',
+                fromPage: this
+              }]
+            };
+          }
+        },
+
+        sharedElements: {
+          value: function() {}
+        }
+      },
+
+      animateTitle: function(e) {
+        var appName = this.querySelector('.app-name');
+        var middleContainer = this.querySelector('.middle-container');
+        var bottomContainer = this.querySelector('.bottom-container');
+        var detail = e.detail;
+        var heightDiff = detail.height - detail.condensedHeight;
+        var yRatio = Math.min(1, detail.y / heightDiff);
+        var maxMiddleScale = 0.50; // appName max size when condensed. The smaller the number the smaller the condensed size.
+        var scaleMiddle = Math.max(maxMiddleScale, (heightDiff - detail.y) / (heightDiff / (1 - maxMiddleScale)) + maxMiddleScale);
+        var scaleBottom = 1 - yRatio;
+
+        // Move/translate middleContainer
+        Polymer.Base.transform('translate3d(0,' + yRatio * 100 + '%,0)', middleContainer);
+
+        // Scale bottomContainer and bottom sub title to nothing and back
+        if (scaleBottom < 0.5) {
+          scaleBottom = 0;
+        }
+        Polymer.Base.transform('scale(' + scaleBottom + ') translateZ(0)', bottomContainer);
+
+        // Scale middleContainer appName
+        Polymer.Base.transform('scale(' + scaleMiddle + ') translateZ(0)', appName);
+      },
+
+      show: function() {
+        this.style.opacity = 1;
+        if (this.animationConfig.entry[0].nodes) {
+          this.playAnimation('entry');
+        }
+      },
+
+      _itemsChanged: function() {
+        this.async(function() {
+          var nodeList = Polymer.dom(this.root).querySelectorAll('.tile');
+          if (nodeList) {
+            this.animationConfig.entry[0].nodes = Array.prototype.slice.call(nodeList);
+          }
+        });
+
+        var _this = this;
+
+        setTimeout(function() {
+          _this.show();
+
+        }, 100);
+      },
+
+      _onTap: function(event) {
+        var target = event.target;
+
+        this.sharedElements = {
+          'hero': target.parentElement
+        };
+
+        var nodesToScale = [];
+        var tiles = Polymer.dom(this.root).querySelectorAll('.tile');
+
+        for (var i = 0; i < tiles.length; i++) {
+          var node = tiles[i];
+          if (node.getAttribute('activityId') !== target.getAttribute('activityId')) {
+            nodesToScale.push(node);
+          }
+        }
+
+        this.animationConfig.exit[0].nodes = nodesToScale;
+        this.fire('category-selected', target.id);
+
+      },
+
+      _getCategoryIcon: function(name) {
+        return 'category-icons:' + name;
+      },
+
+      _concatClass: function(classess, newClass) {
+        return classess + ' ' + newClass;
+      }
+
+    });
+
+  })();
+  </script>
+
+</dom-module>
