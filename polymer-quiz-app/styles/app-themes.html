@@ -1,7 +1,6 @@
 <dom-module id="app-themes"><template><style>
     paper-scroll-header-panel {
       height: 100%;
-      /*background-color: #424242;*/
     }
 
     #mainToolbar {
@@ -33,6 +32,11 @@
       transform-origin: left center;
     }
 
+    #mainToolbar #mainMenu {
+      --paper-menu-button: {
+        padding: 0px;
+      };
+    }
     .tile {
       min-width: 380px;
       max-width: 50%;
@@ -86,7 +90,6 @@
       }
       #paperCardContainer {
         max-width: 100%;
-        /*height: 100vh;*/
       }
       #paperCardContainer paper-toolbar {
         display: block;
