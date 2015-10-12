@@ -1,0 +1,193 @@
+<!-- shared styles for all elements and index.html -->
+<dom-module id="app-themes">
+  <template>
+    <style>
+    paper-scroll-header-panel {
+      height: 100%;
+    }
+
+    #mainToolbar {
+      background: var(--paper-cyan-700);
+    }
+
+    #mainToolbar.tall .app-name {
+      font-size: 40px;
+      font-weight: 300;
+      /* Required for main area's paper-scroll-header-panel custom condensing transformation */
+      -webkit-transform-origin: left center;
+      transform-origin: left center;
+    }
+
+    #mainToolbar .middle-container {
+      height: 100%;
+      margin-left: 48px;
+    }
+
+    #mainToolbar:not(.tall) .middle {
+      font-size: 18px;
+      padding-bottom: 0;
+    }
+
+    #mainToolbar .bottom {
+      margin-left: 48px;
+      /* Required for main area's paper-scroll-header-panel custom condensing transformation */
+      -webkit-transform-origin: left center;
+      transform-origin: left center;
+    }
+
+    #mainToolbar #mainMenu {
+      --paper-menu-button: {
+        padding: 0px;
+      };
+    }
+    .tile {
+      min-width: 380px;
+      max-width: 50%;
+      height: 300px;
+      margin: 3px;
+      cursor: pointer;
+    }
+
+    .tile .tile-footer {
+      height: 30px;
+      padding: 10px;
+    }
+
+    .tile .icon iron-icon {
+      --iron-icon-height: 256px;
+      --iron-icon-width: 256px;
+    }
+
+    #paperCardContainer {
+      max-width: 500px;
+      width: 100%;
+    }
+
+    #paperCardContainer paper-toolbar {
+      background-color: transparent;
+      display: none;
+    }
+
+    #paperCardContainer .card-header {
+      background-color: var(--paper-grey-400);
+      padding: 16px;
+      min-height: 100px;
+    }
+
+    #paperCardContainer .card-header iron-icon {
+      height: 256px;
+      width: 256px;
+    }
+
+    @media (max-width: 860px) {
+      .tile {
+        min-width: 250px;
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 600px) {
+      #mainToolbar.tall .app-name {
+        font-size: 28px;
+        font-weight: 400;
+      }
+      #paperCardContainer {
+        max-width: 100%;
+      }
+      #paperCardContainer paper-toolbar {
+        display: block;
+      }
+    }
+    /* PURPLE */
+
+    #mainToolbar.purple,
+    .tile.purple .tile-footer,
+    #paperCardContainer.purple .card-header,
+    #paperCardContainer.purple .card-toolbar {
+      background-color: var(--paper-purple-500);
+      color: white;
+    }
+
+    .tile.purple,
+    #placeholder.purple {
+      background-color: var(--paper-purple-300);
+      color: white;
+    }
+    /* GREEN */
+
+    #mainToolbar.green,
+    .tile.green .tile-footer,
+    #paperCardContainer.green .card-header,
+    #paperCardContainer.green .card-toolbar {
+      background-color: var(--paper-green-500);
+      color: white;
+    }
+
+    .tile.green,
+    #placeholder.green {
+      background-color: var(--paper-green-300);
+      color: white;
+    }
+    /* ORANGE */
+
+    #mainToolbar.orange,
+    .tile.orange .tile-footer,
+    #paperCardContainer.orange .card-header,
+    #paperCardContainer.orange .card-toolbar {
+      color: white;
+      background-color: var(--paper-orange-500);
+    }
+
+    .tile.orange,
+    #placeholder.orange {
+      background-color: var(--paper-orange-300);
+      color: white;
+    }
+    /* RED */
+
+    #mainToolbar.red,
+    .tile.red .tile-footer,
+    #paperCardContainer.red .card-header,
+    #paperCardContainer.red .card-toolbar {
+      background-color: var(--paper-red-500);
+      color: white;
+    }
+
+    .tile.red,
+    #placeholder.red {
+      background-color: var(--paper-red-300);
+      color: white;
+    }
+    /* BLUE */
+
+    #mainToolbar.blue,
+    .tile.blue .tile-footer,
+    #paperCardContainer.blue .card-header,
+    #paperCardContainer.blue .card-toolbar {
+      background-color: var(--paper-blue-500);
+      color: white;
+    }
+
+    .tile.blue,
+    #placeholder.blue {
+      background-color: var(--paper-blue-300);
+      color: white;
+    }
+    /* YELLOW */
+
+    #mainToolbar.yellow,
+    .tile.yellow .tile-footer,
+    #paperCardContainer.yellow .card-header,
+    #paperCardContainer.yellow .card-toolbar {
+      background-color: var(--paper-yellow-900);
+      color: white;
+    }
+
+    .tile.yellow,
+    #placeholder.yellow {
+      background-color: var(--paper-yellow-800);
+      color: white;
+    }
+    </style>
+  </template>
+</dom-module>
