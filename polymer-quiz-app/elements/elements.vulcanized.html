@@ -24254,8 +24254,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       register: function(loginData) {
         var _this = this;
-        this.firebase.createUser(loginData, function(err, data) {
-          _this._loginSucess(err, data);
+        this.firebase.createUser(loginData, function(err) {
+          if (err) {
+            this.fire('app:alert', err);
+          } else {
+            _this.login(loginData);
+          }
         });
       },
 
