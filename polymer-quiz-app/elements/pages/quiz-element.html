@@ -27,13 +27,13 @@
     <div id="placeholder" class$="[[concatClass('layout horizontal fit', quiz.theme)]]"></div>
     <div class="layout vertical fit">
       <paper-toolbar>
-        <paper-icon-button on-tap="_pause" icon="arrow-back" hidden$="[[inResultsView]]"></paper-icon-button>
+        <paper-icon-button on-tap="_pause" icon="arrow-back" hidden$="[[_inResultsView(selected)]]"></paper-icon-button>
       </paper-toolbar>
 
       <neon-animated-pages id="quizPageSelector" selected="{{selected}}" class="flex">
-        <quiz-front-page id="frontPage" quiz="[[quiz]]" wide="[[wide]]" status="[[getQuizStatus()]]" on-quiz-start="_initialize" on-quiz-resume="_resumed" on-close-quiz-view="_close"></quiz-front-page>
-        <question-list quiz="{{quiz}}" wide="[[wide]]" on-quiz-terminated="_terminate" on-quiz-paused="_pause"></question-list>
-        <quiz-results-page quiz="{{quiz}}" wide="[[wide]]" on-close-quiz-view="_close"></quiz-results-page>
+        <quiz-front-page id="frontPage" quiz="[[quiz]]" user="[[user]]" wide="[[wide]]" on-quiz-start="_initialize" on-quiz-resume="_resumed" on-close-quiz-view="_close"></quiz-front-page>
+        <question-list quiz="{{quiz}}" user="{{user}}" wide="[[wide]]" on-quiz-terminated="_terminate" on-quiz-paused="_pause"></question-list>
+        <quiz-results-page quiz="[[quiz]]" user="[[user]]" wide="[[wide]]" on-close-quiz-view="_close"></quiz-results-page>
       </neon-animated-pages>
     </div>
   </template>
@@ -53,19 +53,9 @@
       ],
 
       properties: {
-        quiz: {
-          type: Object,
-          notify: true,
-          observer: '_quizChanged'
-        },
-        inResultsView: {
-          type: Boolean,
-          default: false
-        },
         selected: {
           type: Number,
-          notify: true,
-          observer: '_selectedChanged'
+          notify: true
         },
 
         animationConfig: {
@@ -100,7 +90,7 @@
         }
       },
 
-      _quizChanged: function() {
+      quizChanged: function() {
         if (this.quiz) {
           this.selected = 0;
           this.$.frontPage.show();
@@ -143,6 +133,9 @@
             parent: this.quiz.parent
           }
         });
+
+        this.userTerminateQuiz();
+
         this._next();
       },
 
@@ -181,8 +174,8 @@
         }
       },
 
-      _selectedChanged: function() {
-        this.inResultsView = (this.selected === 2);
+      _inResultsView: function() {
+        return this.selected === 2;
       }
 
     });

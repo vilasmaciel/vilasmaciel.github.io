@@ -1,0 +1,165 @@
+<script>
+var QuizApp = QuizApp || {};
+
+QuizApp.AppQuizUtilsBehavior = {
+
+  properties: {
+    quiz: {
+      type: Object,
+      notify: true,
+      observer: '_quizChanged'
+    }
+  },
+
+  _quizChanged: function() {
+    if (this.quizChanged) {
+      this.quizChanged();
+    }
+  },
+
+  getQuizStatus: function(userData, quiz) {
+    if (quiz) {
+      var quizId = this.getQuizId(quiz);
+      if (this._validateData(userData, quiz)) {
+        return userData.activities[quizId].attempts[0].status;
+      }
+    }
+  },
+
+  isPaused: function(userData, quiz) {
+    var status = this.getQuizStatus(userData, quiz);
+
+    return (status === 'paused' ||
+      status === 'resumed' ||
+      status === 'initialized');
+  },
+
+  getQuizId: function(quiz) {
+    if (quiz) {
+      var id = quiz.activityId.split('.').join('__');
+      return id.split('/').join('__');
+    }
+  },
+
+  getQuestionId: function(question) {
+    if (question) {
+      return this.getQuizId(question);
+    } else {
+      throw new Error('No question');
+    }
+  },
+
+  getSelectedOption: function(userData, quiz, question) {
+    var quizId = this.getQuizId(quiz);
+    var questionId = this.getQuestionId(question);
+
+    if (this._validateData(userData, quiz)) {
+      var attempt = userData.activities[quizId].attempts[0];
+
+      if (attempt[questionId]) {
+        return attempt[questionId];
+      }
+    }
+
+    return null;
+  },
+
+  getSelectedOptionName: function(userData, quiz, question) {
+    var selected = this.getSelectedOption(userData, quiz, question);
+    if (selected) {
+      return selected.selectedValue;
+    }
+
+    return selected;
+  },
+
+  getSelectedOptionIndex: function(userData, quiz, question) {
+    var option = this.getSelectedOption(userData, quiz, question);
+    if (option) {
+      return option.selectedIndex;
+    }
+
+    return option;
+  },
+
+  getResultForQuestion: function(userData, quiz, question) {
+    var index = this.getSelectedOptionIndex(userData, quiz, question);
+
+    if (question.answer[0] === index) {
+      return true;
+    } else {
+      return false;
+    }
+
+  },
+
+  getResultTextForQuestion: function(userData, quiz, question) {
+    var index = this.getSelectedOptionIndex(userData, quiz, question);
+
+    if (question.answer[0] === index) {
+      return 'success';
+    } else {
+      return 'fail';
+    }
+
+  },
+
+  getResultIcon: function(userData, quiz, question) {
+    if (this.getResultForQuestion(userData, quiz, question)) {
+      return 'icons:done';
+    } else {
+      return 'icons:close';
+    }
+  },
+
+  getSuccessQuestions: function(userData, quiz) {
+    var success = 0;
+    if (quiz) {
+      for (var i = 0; i < quiz.questions.length; i++) {
+        if (this.getResultForQuestion(userData, quiz, quiz.questions[i])) {
+          success++;
+        }
+      }
+    }
+    return success;
+  },
+
+  getTotal: function(quiz) {
+    if (this.quiz) {
+      return quiz.questions.length;
+    }
+  },
+
+  _validateData: function(userData, quiz) {
+    var quizId = this.getQuizId(quiz);
+    if (!userData) {
+      throw new Error('No user');
+      // return false;
+    }
+
+    if (!userData.activities) {
+      // throw new Error('User don\'t have activities property');
+      // console.warn('User don\'t have activities property');
+      return false;
+    }
+    if (!userData.activities[quizId]) {
+      // throw new Error('User don\'t have activity entry value');
+      // console.warn('User don\'t have activity entry value');
+      return false;
+    }
+
+    if (!userData.activities[quizId].attempts.length) {
+      // throw new Error('User don\'t have activity attempt');
+      // console.warn('User don\'t have activity attempt');
+      return false;
+    }
+
+    return true;
+  },
+
+  _isNotFinished: function(userData, quiz) {
+    return (userData.activities[this.getQuestionId(quiz)].attempts[0].status !== 'terminated');
+  }
+
+};
+</script>

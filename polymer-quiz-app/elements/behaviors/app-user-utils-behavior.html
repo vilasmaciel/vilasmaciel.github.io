@@ -1,12 +1,24 @@
+<link rel="import" href="app-quiz-utils-behavior.html">
 <script>
 var QuizApp = QuizApp || {};
 
-QuizApp.AppUserUtilsBehavior = {
+var AppUserUtilsBehaviorImpl = {
 
   properties: {
     user: {
       type: Object,
+      notify: true,
+      observer: '_userChanged'
+    },
+    quizStatus: {
+      type: String,
       notify: true
+    }
+  },
+
+  _userChanged: function() {
+    if (this.userChanged) {
+      this.userChanged();
     }
   },
 
@@ -14,19 +26,22 @@ QuizApp.AppUserUtilsBehavior = {
     if (!this.user) {
       return console.error('No user found');
     }
+    var quizId = this.getQuizId(this.quiz);
 
     this.user.activities = this.user.activities || {};
-    this.user.activities[this._getQuizId()] = this.user.activities[this._getQuizId()] || {};
-    this.user.activities[this._getQuizId()].attempts = this.user.activities[this._getQuizId()].attempts || [];
+    this.user.activities[quizId] = this.user.activities[quizId] || {};
+    this.user.activities[quizId].attempts = this.user.activities[quizId].attempts || [];
   },
 
   userInitializeQuiz: function() {
     this._initializeProperties();
+    var quizId = this.getQuizId(this.quiz);
 
-    this.user.activities[this._getQuizId()].attempts.unshift({
-      attemptId: this._generateUUID(),
-      status: 'initialized'
+    this.user.activities[quizId].attempts.unshift({
+      attemptId: this._generateUUID()
     });
+
+    this.user.activities[quizId].attempts[0].status = 'initialized';
 
     this.fire('iron-signal', {
       name: 'user-changed',
@@ -34,11 +49,56 @@ QuizApp.AppUserUtilsBehavior = {
     });
   },
 
+  userStoreIndex: function(index) {
+    var quizId = this.getQuizId(this.quiz);
+    this.user.activities[quizId].attempts[0].index = index;
+    this.fire('iron-signal', {
+      name: 'user-changed',
+      data: this.user
+    });
+  },
+
+  userStoreFinalResult: function() {
+    var quizId = this.getQuizId(this.quiz);
+    var success = this.getSuccessQuestions(this.user, this.quiz);
+    var total = this.getTotal(this.quiz);
+    var result = 0;
+
+    if (success) {
+      result = parseFloat(success/ total).toFixed(2);
+      console.log(result);
+      result = result * 100;
+      result = Math.round(result);
+    }
+
+    this.user.activities[quizId].attempts[0].success = success;
+    this.user.activities[quizId].attempts[0].total = total;
+    this.user.activities[quizId].attempts[0].result = result;
+  },
+
+  getUserQuestionIndex: function(userData, quiz) {
+    var quizId = this.getQuizId(quiz);
+    if (userData.activities &&
+      userData.activities[quizId] &&
+      userData.activities[quizId].attempts[0]) {
+      return userData.activities[quizId].attempts[0].index;
+    } else {
+      return 0;
+    }
+  },
+
+  getUserProgress: function(userData, quiz) {
+    return (this.getUserQuestionIndex(userData, quiz) / this.getTotal(quiz)) * 100;
+  },
+
   userPauseQuiz: function() {
     this._initializeProperties();
+    var quizId = this.getQuizId(this.quiz);
 
-    if (this.user.activities[this._getQuizId()].attempts[0]) {
-      this.user.activities[this._getQuizId()].attempts[0].status = 'paused';
+    if (this.user.activities[quizId]) {
+
+      this.user.activities[quizId].attempts[0].status = 'paused';
+
       this.fire('iron-signal', {
         name: 'user-changed',
         data: this.user
@@ -46,24 +106,57 @@ QuizApp.AppUserUtilsBehavior = {
     } else {
       console.error('Error on paused quiz. No previous data found');
     }
-
   },
 
-  // getAttemptId: function() {
+  userResumeQuiz: function() {
+    this._initializeProperties();
+    var quizId = this.getQuizId(this.quiz);
 
-  // },
+    if (this.user.activities[quizId]) {
 
-  getQuizStatus: function() {
-    if (this.user &&
-      this.user.activities &&
-      this.user.activities[this._getQuizId()]) {
-      return this.user.activities[this._getQuizId()].attempts[0].status;
+      this.user.activities[quizId].attempts[0].status = 'resumed';
+
+      this.fire('iron-signal', {
+        name: 'user-changed',
+        data: this.user
+      });
+    } else {
+      console.error('Error on paused quiz. No previous data found');
     }
   },
 
-  _getQuizId: function() {
-    var id = this.quiz.activityId.split('.').join('__');
-    return id.split('/').join('__');
+  userTerminateQuiz: function() {
+    this._initializeProperties();
+    var quizId = this.getQuizId(this.quiz);
+
+    if (this.user.activities[quizId]) {
+
+      this.user.activities[quizId].attempts[0].status = 'terminated';
+      this.userStoreFinalResult();
+
+      this.fire('iron-signal', {
+        name: 'user-changed',
+        data: this.user
+      });
+    } else {
+      console.error('Error on paused quiz. No previous data found');
+    }
+  },
+
+  userInteractQuestion: function(value, index) {
+    this._initializeProperties();
+    var quizId = this.getQuizId(this.quiz);
+    var questionId = this.getQuestionId(this.question);
+
+    this.user.activities[quizId].attempts[0][questionId] = this.user.activities[quizId].attempts[0][questionId] || {};
+
+    this.user.activities[quizId].attempts[0][questionId].selectedValue = value;
+    this.user.activities[quizId].attempts[0][questionId].selectedIndex = index;
+
+    this.fire('iron-signal', {
+      name: 'user-changed',
+      data: this.user
+    });
   },
 
   _generateUUID: function() {
@@ -79,4 +172,6 @@ QuizApp.AppUserUtilsBehavior = {
   }
 
 };
+
+QuizApp.AppUserUtilsBehavior = [QuizApp.AppQuizUtilsBehavior, AppUserUtilsBehaviorImpl];
 </script>

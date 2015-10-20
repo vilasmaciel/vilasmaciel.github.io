@@ -20,6 +20,11 @@
       margin-left: 48px;
     }
 
+    #mainToolbar.main .middle-container {
+      height: 100%;
+      margin-left: 0px;
+    }
+
     #mainToolbar:not(.tall) .middle {
       font-size: 18px;
       padding-bottom: 0;
@@ -35,8 +40,10 @@
     #mainToolbar #mainMenu {
       --paper-menu-button: {
         padding: 0px;
-      };
+      }
+      ;
     }
+
     .tile {
       min-width: 380px;
       max-width: 50%;
@@ -105,6 +112,10 @@
       color: white;
     }
 
+    paper-progress.purple {
+      --paper-progress-active-color: var(--paper-purple-500);
+    }
+
     .tile.purple,
     #placeholder.purple {
       background-color: var(--paper-purple-300);
@@ -125,6 +136,10 @@
       background-color: var(--paper-green-300);
       color: white;
     }
+
+    paper-progress.green {
+      --paper-progress-active-color: var(--paper-green-500);
+    }
     /* ORANGE */
 
     #mainToolbar.orange,
@@ -139,6 +154,10 @@
     #placeholder.orange {
       background-color: var(--paper-orange-300);
       color: white;
+    }
+
+    paper-progress.orange {
+      --paper-progress-active-color: var(--paper-orange-500);
     }
     /* RED */
 
@@ -155,6 +174,10 @@
       background-color: var(--paper-red-300);
       color: white;
     }
+
+    paper-progress.red {
+      --paper-progress-active-color: var(--paper-red-500);
+    }
     /* BLUE */
 
     #mainToolbar.blue,
@@ -170,6 +193,10 @@
       background-color: var(--paper-blue-300);
       color: white;
     }
+
+    paper-progress.blue {
+      --paper-progress-active-color: var(--paper-blue-500);
+    }
     /* YELLOW */
 
     #mainToolbar.yellow,
@@ -184,5 +211,9 @@
     #placeholder.yellow {
       background-color: var(--paper-yellow-800);
       color: white;
+    }
+
+    paper-progress.yellow {
+      --paper-progress-active-color: var(--paper-yellow-900);
     }
     </style></template></dom-module>

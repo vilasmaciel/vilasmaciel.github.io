@@ -3,12 +3,17 @@
     <style>
     .background {
       background: var(--paper-cyan-700);
-      opacity: .5
+      overflow: hidden;
+    }
+
+    .container {
+      overflow: auto;
     }
 
     paper-card {
       top: 100px;
       width: 300px;
+      height: 340px;
     }
 
     paper-card {
@@ -20,18 +25,29 @@
     }
 
     paper-card .card-actions paper-button {
-      width: 100%;
       margin-bottom: 5px;
       margin-top: 5px;
-      color: white;
     }
 
     paper-card .card-actions paper-button.login {
-      background-color: var(--paper-green-700);
+      color: var(--paper-blue-700);
     }
 
     paper-card .card-actions paper-button.register {
-      background-color: var(--paper-deep-orange-700);
+      color: var(--paper-grey-800);
+    }
+
+    paper-card .card-actions paper-button.googleplus {
+      background-color: #da4336;
+      font-size: 14px;
+      width: 100%;
+      color: white;
+    }
+
+    paper-card .card-actions paper-button.googleplus iron-icon {
+      margin-right: 5px;
+      --iron-icon-height: 20px;
+      --iron-icon-width: 20px;
     }
 
     @media (max-width: 600px) {
@@ -44,7 +60,7 @@
 
     <div class="background fit"></div>
 
-    <div class="layout flex horizontal center center-justified">
+    <div class="layout fit horizontal center-justified container">
       <paper-card id="loginPaperCard" elevation="1" heading="Quiz App Login">
         <div class="card-content">
           <paper-input id="email" label="Email" autoValidate value="{{email}}" type="email"></paper-input>
@@ -53,6 +69,12 @@
         <div class="card-actions">
           <paper-button on-tap="login" class="login">Enter</paper-button>
           <paper-button on-tap="register" class="register">Register</paper-button>
+        </div>
+        <div class="card-actions">
+          <paper-button on-tap="loginGoogle" class="googleplus">
+            <iron-icon icon="brand-icons:googleplus"></iron-icon>
+            Sign in
+          </paper-button>
         </div>
       </paper-card>
     </div>
@@ -78,11 +100,13 @@
         email: {
           type: String,
           notify: true,
+          value: 'vilasmaciel@gmail.com',
           observer: '_emailChanged',
         },
         password: {
           type: String,
           notify: true,
+          value: '1234',
           observer: '_passwordChanged',
         },
         form: {
@@ -118,6 +142,10 @@
           });
         }
         /* jshint ignore:end */
+      },
+
+      loginGoogle: function() {
+        this.fire('login-google');
       },
 
       register: function() {

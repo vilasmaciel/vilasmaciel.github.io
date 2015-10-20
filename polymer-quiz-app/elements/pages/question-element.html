@@ -25,28 +25,30 @@
 
         <div class="card-content layout vertical flex">
 
-          <template is="dom-if" if="{{_isSingle(question.type)}}">
-            <paper-radio-group class="layout vertical flex">
-              <template is="dom-repeat" items="{{question.options}}">
-                <paper-radio-button name="{{item}}">{{item}}</paper-radio-button>
-              </template>
-            </paper-radio-group>
-          </template>
+          <!-- <template is="dom-if" if="{{_isSingle(question.type)}}"> -->
+
+          <paper-radio-group selected="{{getSelectedOptionName(user, quiz, question)}}" id="radioGroup" class="layout vertical flex">
+            <template is="dom-repeat" items="{{question.options}}">
+              <paper-radio-button on-tap="_interacted" name="{{item}}">{{item}}</paper-radio-button>
+            </template>
+          </paper-radio-group>
+
+          <!-- </template> -->
 
         </div>
 
         <div class="card-actions">
 
-          <paper-button on-tap="_prev" hidden$="[[_isFirst(index, quiz)]]">
+          <paper-button on-tap="_prev" hidden="[[_isFirst(index, quiz)]]">
             <iron-icon icon="icons:chevron-left"></iron-icon> Prev
           </paper-button>
 
-          <paper-button on-tap="_next" hidden$="[[_notLast(index, quiz)]]">
+          <paper-button on-tap="_next" hidden="[[!_isLast(index, quiz)]]">
             Next
             <iron-icon icon="icons:chevron-right"></iron-icon>
           </paper-button>
 
-          <paper-button on-tap="_terminate" hidden$="{{_isLast(index, quiz)}}">
+          <paper-button on-tap="_terminate" hidden="[[_isLast(index, quiz)]]">
             Finish
           </paper-button>
         </div>
@@ -66,15 +68,12 @@
       behaviors: [
         Polymer.NeonSharedElementAnimatableBehavior,
         Polymer.NeonAnimationRunnerBehavior,
+        QuizApp.AppUserUtilsBehavior,
         QuizApp.AppUtilsBehavior
       ],
 
       properties: {
         question: {
-          type: Object,
-          notify: true
-        },
-        quiz: {
           type: Object,
           notify: true
         },
@@ -109,6 +108,7 @@
             parent: this.quiz.activityId
           }
         });
+        this.userStoreIndex(this.index);
       },
 
       terminate: function() {
@@ -157,6 +157,19 @@
         });
       },
 
+      _interacted: function(e) {
+        this.fire('iron-signal', {
+          name: 'interacted',
+          data: {
+            activity: this.question,
+            parent: this.quiz.activityId
+          }
+        });
+        var radioGroup = Polymer.dom(this.root).querySelector('#radioGroup');
+        var selectedIndex = radioGroup.indexOf(e.target);
+        this.userInteractQuestion(e.target.name, selectedIndex);
+      },
+
       _pause: function() {
         this.pause();
         this.fire('quiz-paused');
@@ -179,13 +192,9 @@
         this.fire('prev');
       },
 
-      _isFirst: function(index, quiz) {
-        return (index === 0) || (index === (quiz.questions.length - 1));
-      },
-
       /* jshint ignore:start */
-      _notLast: function(index, quiz) {
-        return !(index !== (quiz.questions.length - 1));
+      _isFirst: function(index, quiz) {
+        return (index === 0);
       },
 
       _isLast: function(index, quiz) {

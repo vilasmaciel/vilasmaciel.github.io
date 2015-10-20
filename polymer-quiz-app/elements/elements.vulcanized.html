@@ -7213,6 +7213,8 @@ this.fire('dom-change');
 
   })();
 </script>
+
+
 <style>
   /* IE 10 support for HTML5 hidden attr */
   [hidden] {
@@ -7644,6 +7646,9 @@ this.fire('dom-change');
      */
     _nameChanged: function() {
       new Polymer.IronMeta({type: 'iconset', key: this.name, value: this});
+      this.async(function() {
+        this.fire('iron-iconset-added', this, {node: window});
+      });
     },
 
     /**
@@ -7901,7 +7906,7 @@ this.fire('dom-change');
      * the selected item or undefined if there is no selection.
      */
     get: function() {
-      return this.multi ? this.selection : this.selection[0];
+      return this.multi ? this.selection.slice() : this.selection[0];
     },
 
     /**
@@ -8077,9 +8082,10 @@ this.fire('dom-change');
       },
 
       /**
-       * The set of excluded elements where the key is the `localName` 
+       * The set of excluded elements where the key is the `localName`
        * of the element that will be ignored from the item list.
        *
+       * @type {object}
        * @default {template: 1}
        */
       excludedLocalNames: {
@@ -8104,6 +8110,9 @@ this.fire('dom-change');
     attached: function() {
       this._observer = this._observeItems(this);
       this._contentObserver = this._observeContent(this);
+      if (!this.selectedItem && this.selected) {
+        this._updateSelected(this.attrForSelected,this.selected)
+      }
     },
 
     detached: function() {
@@ -8388,9 +8397,9 @@ this.fire('dom-change');
       var i = this.selectedValues.indexOf(value);
       var unselected = i < 0;
       if (unselected) {
-        this.selectedValues.push(value);
+        this.push('selectedValues',value);
       } else {
-        this.selectedValues.splice(i, 1);
+        this.splice('selectedValues',i,1);
       }
       this._selection.setItemSelected(this._valueToItem(value), unselected);
     }
@@ -8601,6 +8610,10 @@ if (!window.Promise) {
 
   Polymer({
     is: 'iron-request',
+
+    hostAttributes: {
+      hidden: true
+    },
 
     properties: {
 
@@ -8977,6 +8990,10 @@ if (!window.Promise) {
      * @event error
      */
 
+    hostAttributes: {
+      hidden: true
+    },
+
     properties: {
       /**
        * The URL target of the request.
@@ -9121,17 +9138,7 @@ if (!window.Promise) {
       },
 
       /**
-       * Will be set to true if there is at least one in-flight request
-       * associated with this iron-ajax element.
-       */
-      loading: {
-        type: Boolean,
-        notify: true,
-        readOnly: true
-      },
-
-      /**
-       * Will be set to the most recent request made by this iron-ajax element.
+       * The most recent request made by this iron-ajax element.
        */
       lastRequest: {
         type: Object,
@@ -9140,10 +9147,23 @@ if (!window.Promise) {
       },
 
       /**
-       * Will be set to the most recent response received by a request
-       * that originated from this iron-ajax element. The type of the response
-       * is determined by the value of `handleAs` at the time that the request
-       * was generated.
+       * True while lastRequest is in flight.
+       */
+      loading: {
+        type: Boolean,
+        notify: true,
+        readOnly: true
+      },
+
+      /**
+       * lastRequest's response.
+       *
+       * Note that lastResponse and lastError are set when lastRequest finishes,
+       * so if loading is true, then lastResponse and lastError will correspond
+       * to the result of the previous request.
+       *
+       * The type of the response is determined by the value of `handleAs` at
+       * the time that the request was generated.
        */
       lastResponse: {
         type: Object,
@@ -9152,8 +9172,7 @@ if (!window.Promise) {
       },
 
       /**
-       * Will be set to the most recent error that resulted from a request
-       * that originated from this iron-ajax element.
+       * lastRequest's error, if any.
        */
       lastError: {
         type: Object,
@@ -9192,7 +9211,7 @@ if (!window.Promise) {
     },
 
     observers: [
-      '_requestOptionsChanged(url, method, params, headers,' +
+      '_requestOptionsChanged(url, method, params.*, headers,' +
         'contentType, body, sync, handleAs, withCredentials, auto)'
     ],
 
@@ -9316,14 +9335,18 @@ if (!window.Promise) {
       this.fire('request', {
         request: request,
         options: requestOptions
-      });
+      }, {bubbles: false});
 
       return request;
     },
 
     _handleResponse: function(request) {
-      this._setLastResponse(request.response);
-      this.fire('response', request);
+      if (request === this.lastRequest) {
+        this._setLastResponse(request.response);
+        this._setLastError(null);
+        this._setLoading(false);
+      }
+      this.fire('response', request, {bubbles: false});
     },
 
     _handleError: function(request, error) {
@@ -9331,14 +9354,18 @@ if (!window.Promise) {
         console.error(error);
       }
 
-      this._setLastError({
-        request: request,
-        error: error
-      });
+      if (request === this.lastRequest) {
+        this._setLastError({
+          request: request,
+          error: error
+        });
+        this._setLastResponse(null);
+        this._setLoading(false);
+      }
       this.fire('error', {
         request: request,
         error: error
-      });
+      }, {bubbles: false});
     },
 
     _discardRequest: function(request) {
@@ -9346,10 +9373,6 @@ if (!window.Promise) {
 
       if (requestIndex > -1) {
         this.activeRequests.splice(requestIndex, 1);
-      }
-
-      if (this.activeRequests.length === 0) {
-        this._setLoading(false);
       }
     },
 
@@ -9668,7 +9691,7 @@ of where they are in DOM.
      * `keys` property is pressed.
      *
      * @demo demo/index.html
-     * @polymerBehavior IronA11yKeysBehavior
+     * @polymerBehavior
      */
     Polymer.IronA11yKeysBehavior = {
       properties: {
@@ -9954,6 +9977,8 @@ Keys Syntax Grammar:
     }
   });
 </script>
+
+
 <script>/*! @license Firebase v2.3.1
     License: https://www.firebase.com/terms/terms-of-service.html */
 (function() {var g,aa=this;function n(a){return void 0!==a}function ba(){}function ca(a){a.ub=function(){return a.uf?a.uf:a.uf=new a}}
@@ -13248,6 +13273,20 @@ is separate from validation, and `allowed-pattern` does not affect how the input
         value: 'off'
       },
 
+      /**
+       * Bind this to the `<input is="iron-input">`'s `autosave` property, used with type=search.
+       */
+      autosave: {
+        type: String
+      },
+
+      /**
+       * Bind this to the `<input is="iron-input">`'s `results` property, , used with type=search.
+       */
+      results: {
+        type: Number
+      },
+
       _ariaDescribedBy: {
         type: String,
         value: ''
@@ -13791,7 +13830,8 @@ intent. Closing generally implies that the user acknowledged the content on the 
 it will cancel whenever the user taps outside it or presses the escape key. This behavior is
 configurable with the `no-cancel-on-esc-key` and the `no-cancel-on-outside-click` properties.
 `close()` should be called explicitly by the implementer when the user interacts with a control
-in the overlay element.
+in the overlay element. When the dialog is canceled, the overlay fires an 'iron-overlay-canceled'
+event. Call `preventDefault` on this event to prevent the overlay from closing.
 
 ### Positioning
 
@@ -13962,6 +14002,11 @@ context. You should place this element as a child of `<body>` whenever possible.
      * Cancels the overlay.
      */
     cancel: function() {
+      var cancelEvent = this.fire('iron-overlay-canceled', undefined, {cancelable: true});
+      if (cancelEvent.defaultPrevented) {
+        return;
+      }
+
       this.opened = false;
       this._setCanceled(true);
     },
@@ -14926,6 +14971,107 @@ context. You should place this element as a child of `<body>` whenever possible.
 </script>
 
 
+
+
+<script>
+
+ /** 
+ * `iron-range-behavior` provides the behavior for something with a minimum to maximum range.
+ *
+ * @demo demo/index.html
+ * @polymerBehavior 
+ */
+ Polymer.IronRangeBehavior = {
+
+  properties: {
+
+    /**
+     * The number that represents the current value.
+     */
+    value: {
+      type: Number,
+      value: 0,
+      notify: true,
+      reflectToAttribute: true
+    },
+
+    /**
+     * The number that indicates the minimum value of the range.
+     */
+    min: {
+      type: Number,
+      value: 0,
+      notify: true
+    },
+
+    /**
+     * The number that indicates the maximum value of the range.
+     */
+    max: {
+      type: Number,
+      value: 100,
+      notify: true
+    },
+
+    /**
+     * Specifies the value granularity of the range's value.
+     */
+    step: {
+      type: Number,
+      value: 1,
+      notify: true
+    },
+
+    /**
+     * Returns the ratio of the value.
+     */
+    ratio: {
+      type: Number,
+      value: 0,
+      readOnly: true,
+      notify: true
+    },
+  },
+
+  observers: [
+    '_update(value, min, max, step)'
+  ],
+
+  _calcRatio: function(value) {
+    return (this._clampValue(value) - this.min) / (this.max - this.min);
+  },
+
+  _clampValue: function(value) {
+    return Math.min(this.max, Math.max(this.min, this._calcStep(value)));
+  },
+
+  _calcStep: function(value) {
+   /**
+    * if we calculate the step using
+    * `Math.round(value / step) * step` we may hit a precision point issue 
+    * eg. 0.1 * 0.2 =  0.020000000000000004
+    * http://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html
+    *
+    * as a work around we can divide by the reciprocal of `step`
+    */
+    // polymer/issues/2493
+    value = parseFloat(value);
+    return this.step ? (Math.round((value + this.min) / this.step) / (1 / this.step)) - this.min : value;
+  },
+
+  _validateValue: function() {
+    var v = this._clampValue(this.value);
+    this.value = this.oldValue = isNaN(v) ? this.oldValue : v;
+    return this.value !== v;
+  },
+
+  _update: function() {
+    this._validateValue();
+    this._setRatio(this._calcRatio(this.value) * 100);
+  }
+
+};
+</script>
 
 
 
@@ -16331,37 +16477,37 @@ QuizApp.xAPIManagerBehavior = {
 
   initialized: function(data) {
     data = null;
-    console.log('initialized');
+    // console.log('initialized');
   },
 
   terminated: function(data) {
     data = null;
-    console.log('terminated');
+    // console.log('terminated');
   },
 
   paused: function(data) {
     data = null;
-    console.log('paused');
+    // console.log('paused');
   },
 
   resumed: function(data) {
     data = null;
-    console.log('resumed');
+    // console.log('resumed');
   },
 
   responded: function(data) {
     data = null;
-    console.log('responded');
+    // console.log('responded');
   },
 
   passed: function(data) {
     data = null;
-    console.log('passed');
+    // console.log('passed');
   },
 
   failed: function(data) {
     data = null;
-    console.log('failed');
+    // console.log('failed');
   }
 
 };
@@ -16381,13 +16527,13 @@ QuizApp.AppUtilsBehavior = {
 
   animateTitle: function(e) {
     var appName = this.querySelector('.app-name');
+    var userAvatar = this.querySelector('user-avatar');
     var middleContainer = this.querySelector('.middle-container');
     var bottomContainer = this.querySelector('.bottom-container');
     var detail = e.detail;
     var heightDiff = detail.height - detail.condensedHeight;
     var yRatio = Math.min(1, detail.y / heightDiff);
-    var maxMiddleScale = 0.50; // appName max size when condensed. The smaller the number the smaller the condensed size.
-    var scaleMiddle = Math.max(maxMiddleScale, (heightDiff - detail.y) / (heightDiff / (1 - maxMiddleScale)) + maxMiddleScale);
+    var maxMiddleScale = 0.60; // appName max size when condensed. The smaller the number the smaller the condensed size.
     var scaleBottom = 1 - yRatio;
 
     // Move/translate middleContainer
@@ -16402,8 +16548,17 @@ QuizApp.AppUtilsBehavior = {
       Polymer.Base.transform('scale(' + scaleBottom + ') translateZ(0)', bottomContainer);
     }
 
-    // Scale middleContainer appName
-    Polymer.Base.transform('scale(' + scaleMiddle + ') translateZ(0)', appName);
+    var moveX = yRatio * (-50);
+    var scaleMiddle;
+    if (userAvatar) {
+      scaleMiddle = Math.max(maxMiddleScale, (heightDiff - detail.y) / (heightDiff / (1 - maxMiddleScale)) + maxMiddleScale);
+      Polymer.Base.transform('scale(' + scaleMiddle + ') translateZ(0) translateX( ' + moveX + '%)', appName);
+      Polymer.Base.transform('scale(' + scaleMiddle + ') translateZ(0) translateX( ' + moveX + '%)', userAvatar);
+    } else {
+      scaleMiddle = Math.max(maxMiddleScale, (heightDiff - detail.y) / (heightDiff / (1 - maxMiddleScale)) + maxMiddleScale);
+      Polymer.Base.transform('scale(' + scaleMiddle + ') translateZ(0)', appName);
+
+    }
   },
 
   removeDots: function(string) {
@@ -16415,12 +16570,188 @@ QuizApp.AppUtilsBehavior = {
 <script>
 var QuizApp = QuizApp || {};
 
-QuizApp.AppUserUtilsBehavior = {
+QuizApp.AppQuizUtilsBehavior = {
+
+  properties: {
+    quiz: {
+      type: Object,
+      notify: true,
+      observer: '_quizChanged'
+    }
+  },
+
+  _quizChanged: function() {
+    if (this.quizChanged) {
+      this.quizChanged();
+    }
+  },
+
+  getQuizStatus: function(userData, quiz) {
+    if (quiz) {
+      var quizId = this.getQuizId(quiz);
+      if (this._validateData(userData, quiz)) {
+        return userData.activities[quizId].attempts[0].status;
+      }
+    }
+  },
+
+  isPaused: function(userData, quiz) {
+    var status = this.getQuizStatus(userData, quiz);
+
+    return (status === 'paused' ||
+      status === 'resumed' ||
+      status === 'initialized');
+  },
+
+  getQuizId: function(quiz) {
+    if (quiz) {
+      var id = quiz.activityId.split('.').join('__');
+      return id.split('/').join('__');
+    }
+  },
+
+  getQuestionId: function(question) {
+    if (question) {
+      return this.getQuizId(question);
+    } else {
+      throw new Error('No question');
+    }
+  },
+
+  getSelectedOption: function(userData, quiz, question) {
+    var quizId = this.getQuizId(quiz);
+    var questionId = this.getQuestionId(question);
+
+    if (this._validateData(userData, quiz)) {
+      var attempt = userData.activities[quizId].attempts[0];
+
+      if (attempt[questionId]) {
+        return attempt[questionId];
+      }
+    }
+
+    return null;
+  },
+
+  getSelectedOptionName: function(userData, quiz, question) {
+    var selected = this.getSelectedOption(userData, quiz, question);
+    if (selected) {
+      return selected.selectedValue;
+    }
+
+    return selected;
+  },
+
+  getSelectedOptionIndex: function(userData, quiz, question) {
+    var option = this.getSelectedOption(userData, quiz, question);
+    if (option) {
+      return option.selectedIndex;
+    }
+
+    return option;
+  },
+
+  getResultForQuestion: function(userData, quiz, question) {
+    var index = this.getSelectedOptionIndex(userData, quiz, question);
+
+    if (question.answer[0] === index) {
+      return true;
+    } else {
+      return false;
+    }
+
+  },
+
+  getResultTextForQuestion: function(userData, quiz, question) {
+    var index = this.getSelectedOptionIndex(userData, quiz, question);
+
+    if (question.answer[0] === index) {
+      return 'success';
+    } else {
+      return 'fail';
+    }
+
+  },
+
+  getResultIcon: function(userData, quiz, question) {
+    if (this.getResultForQuestion(userData, quiz, question)) {
+      return 'icons:done';
+    } else {
+      return 'icons:close';
+    }
+  },
+
+  getSuccessQuestions: function(userData, quiz) {
+    var success = 0;
+    if (quiz) {
+      for (var i = 0; i < quiz.questions.length; i++) {
+        if (this.getResultForQuestion(userData, quiz, quiz.questions[i])) {
+          success++;
+        }
+      }
+    }
+    return success;
+  },
+
+  getTotal: function(quiz) {
+    if (this.quiz) {
+      return quiz.questions.length;
+    }
+  },
+
+  _validateData: function(userData, quiz) {
+    var quizId = this.getQuizId(quiz);
+    if (!userData) {
+      throw new Error('No user');
+      // return false;
+    }
+
+    if (!userData.activities) {
+      // throw new Error('User don\'t have activities property');
+      // console.warn('User don\'t have activities property');
+      return false;
+    }
+    if (!userData.activities[quizId]) {
+      // throw new Error('User don\'t have activity entry value');
+      // console.warn('User don\'t have activity entry value');
+      return false;
+    }
+
+    if (!userData.activities[quizId].attempts.length) {
+      // throw new Error('User don\'t have activity attempt');
+      // console.warn('User don\'t have activity attempt');
+      return false;
+    }
+
+    return true;
+  },
+
+  _isNotFinished: function(userData, quiz) {
+    return (userData.activities[this.getQuestionId(quiz)].attempts[0].status !== 'terminated');
+  }
+
+};
+</script>
+<script>
+var QuizApp = QuizApp || {};
+
+var AppUserUtilsBehaviorImpl = {
 
   properties: {
     user: {
       type: Object,
+      notify: true,
+      observer: '_userChanged'
+    },
+    quizStatus: {
+      type: String,
       notify: true
+    }
+  },
+
+  _userChanged: function() {
+    if (this.userChanged) {
+      this.userChanged();
     }
   },
 
@@ -16428,19 +16759,22 @@ QuizApp.AppUserUtilsBehavior = {
     if (!this.user) {
       return console.error('No user found');
     }
+    var quizId = this.getQuizId(this.quiz);
 
     this.user.activities = this.user.activities || {};
-    this.user.activities[this._getQuizId()] = this.user.activities[this._getQuizId()] || {};
-    this.user.activities[this._getQuizId()].attempts = this.user.activities[this._getQuizId()].attempts || [];
+    this.user.activities[quizId] = this.user.activities[quizId] || {};
+    this.user.activities[quizId].attempts = this.user.activities[quizId].attempts || [];
   },
 
   userInitializeQuiz: function() {
     this._initializeProperties();
+    var quizId = this.getQuizId(this.quiz);
 
-    this.user.activities[this._getQuizId()].attempts.unshift({
-      attemptId: this._generateUUID(),
-      status: 'initialized'
+    this.user.activities[quizId].attempts.unshift({
+      attemptId: this._generateUUID()
     });
+
+    this.user.activities[quizId].attempts[0].status = 'initialized';
 
     this.fire('iron-signal', {
       name: 'user-changed',
@@ -16448,11 +16782,56 @@ QuizApp.AppUserUtilsBehavior = {
     });
   },
 
+  userStoreIndex: function(index) {
+    var quizId = this.getQuizId(this.quiz);
+    this.user.activities[quizId].attempts[0].index = index;
+    this.fire('iron-signal', {
+      name: 'user-changed',
+      data: this.user
+    });
+  },
+
+  userStoreFinalResult: function() {
+    var quizId = this.getQuizId(this.quiz);
+    var success = this.getSuccessQuestions(this.user, this.quiz);
+    var total = this.getTotal(this.quiz);
+    var result = 0;
+
+    if (success) {
+      result = parseFloat(success/ total).toFixed(2);
+      console.log(result);
+      result = result * 100;
+      result = Math.round(result);
+    }
+
+    this.user.activities[quizId].attempts[0].success = success;
+    this.user.activities[quizId].attempts[0].total = total;
+    this.user.activities[quizId].attempts[0].result = result;
+  },
+
+  getUserQuestionIndex: function(userData, quiz) {
+    var quizId = this.getQuizId(quiz);
+    if (userData.activities &&
+      userData.activities[quizId] &&
+      userData.activities[quizId].attempts[0]) {
+      return userData.activities[quizId].attempts[0].index;
+    } else {
+      return 0;
+    }
+  },
+
+  getUserProgress: function(userData, quiz) {
+    return (this.getUserQuestionIndex(userData, quiz) / this.getTotal(quiz)) * 100;
+  },
+
   userPauseQuiz: function() {
     this._initializeProperties();
+    var quizId = this.getQuizId(this.quiz);
 
-    if (this.user.activities[this._getQuizId()].attempts[0]) {
-      this.user.activities[this._getQuizId()].attempts[0].status = 'paused';
+    if (this.user.activities[quizId]) {
+
+      this.user.activities[quizId].attempts[0].status = 'paused';
+
       this.fire('iron-signal', {
         name: 'user-changed',
         data: this.user
@@ -16460,24 +16839,57 @@ QuizApp.AppUserUtilsBehavior = {
     } else {
       console.error('Error on paused quiz. No previous data found');
     }
-
   },
 
-  // getAttemptId: function() {
+  userResumeQuiz: function() {
+    this._initializeProperties();
+    var quizId = this.getQuizId(this.quiz);
 
-  // },
+    if (this.user.activities[quizId]) {
 
-  getQuizStatus: function() {
-    if (this.user &&
-      this.user.activities &&
-      this.user.activities[this._getQuizId()]) {
-      return this.user.activities[this._getQuizId()].attempts[0].status;
+      this.user.activities[quizId].attempts[0].status = 'resumed';
+
+      this.fire('iron-signal', {
+        name: 'user-changed',
+        data: this.user
+      });
+    } else {
+      console.error('Error on paused quiz. No previous data found');
     }
   },
 
-  _getQuizId: function() {
-    var id = this.quiz.activityId.split('.').join('__');
-    return id.split('/').join('__');
+  userTerminateQuiz: function() {
+    this._initializeProperties();
+    var quizId = this.getQuizId(this.quiz);
+
+    if (this.user.activities[quizId]) {
+
+      this.user.activities[quizId].attempts[0].status = 'terminated';
+      this.userStoreFinalResult();
+
+      this.fire('iron-signal', {
+        name: 'user-changed',
+        data: this.user
+      });
+    } else {
+      console.error('Error on paused quiz. No previous data found');
+    }
+  },
+
+  userInteractQuestion: function(value, index) {
+    this._initializeProperties();
+    var quizId = this.getQuizId(this.quiz);
+    var questionId = this.getQuestionId(this.question);
+
+    this.user.activities[quizId].attempts[0][questionId] = this.user.activities[quizId].attempts[0][questionId] || {};
+
+    this.user.activities[quizId].attempts[0][questionId].selectedValue = value;
+    this.user.activities[quizId].attempts[0][questionId].selectedIndex = index;
+
+    this.fire('iron-signal', {
+      name: 'user-changed',
+      data: this.user
+    });
   },
 
   _generateUUID: function() {
@@ -16493,6 +16905,8 @@ QuizApp.AppUserUtilsBehavior = {
   }
 
 };
+
+QuizApp.AppUserUtilsBehavior = [QuizApp.AppQuizUtilsBehavior, AppUserUtilsBehaviorImpl];
 </script>
 <script>
 var QuizApp = QuizApp || {};
@@ -16599,11 +17013,14 @@ QuizApp.AppCookieBehavior = {
           type: String,
           observer: '_srcChanged'
         },
-        
+
+        /**
+         * @type {!Polymer.IronMeta}
+         */
         _meta: {
           value: Polymer.Base.create('iron-meta', {type: 'iconset'})
         }
-        
+
       },
 
       _DEFAULT_ICONSET: 'icons',
@@ -16627,12 +17044,13 @@ QuizApp.AppCookieBehavior = {
       _updateIcon: function() {
         if (this._usesIconset()) {
           if (this._iconsetName) {
-            this._iconset = this._meta.byKey(this._iconsetName);
+            this._iconset = /** @type {?Polymer.Iconset} */ (
+              this._meta.byKey(this._iconsetName));
             if (this._iconset) {
               this._iconset.applyIcon(this, this._iconName, this.theme);
+              this.unlisten(window, 'iron-iconset-added', '_updateIcon');
             } else {
-              this._warn(this._logf('_updateIcon', 'could not find iconset `'
-                + this._iconsetName + '`, did you import the iconset?'));
+              this.listen(window, 'iron-iconset-added', '_updateIcon');
             }
           }
         } else {
@@ -17036,6 +17454,1184 @@ QuizApp.AppCookieBehavior = {
       this.async(this.notifyResize);
     }
   });
+
+</script>
+<dom-module id="iron-list" assetpath="../bower_components/iron-list/">
+  <style>
+
+    :host {
+      display: block;
+    }
+
+    :host(.has-scroller) {
+      overflow: auto;
+    }
+
+    :host(:not(.has-scroller)) {
+      position: relative;
+    }
+
+    #items {
+      position: relative;
+    }
+
+    #items > ::content > * {
+      width: 100%;
+      box-sizing: border-box;
+      position: absolute;
+      top: 0;
+      will-change: transform;
+    }
+
+  </style>
+  <template>
+
+    <array-selector id="selector" items="{{items}}" selected="{{selectedItems}}" selected-item="{{selectedItem}}">
+    </array-selector>
+
+    <div id="items">
+      <content></content>
+    </div>
+
+  </template>
+</dom-module>
+
+<script>
+
+(function() {
+
+  var IOS = navigator.userAgent.match(/iP(?:hone|ad;(?: U;)? CPU) OS (\d+)/);
+  var IOS_TOUCH_SCROLLING = IOS && IOS[1] >= 8;
+  var DEFAULT_PHYSICAL_COUNT = 20;
+  var MAX_PHYSICAL_COUNT = 500;
+
+  Polymer({
+
+    is: 'iron-list',
+
+    properties: {
+
+      /**
+       * An array containing items determining how many instances of the template
+       * to stamp and that that each template instance should bind to.
+       */
+      items: {
+        type: Array
+      },
+
+      /**
+       * The name of the variable to add to the binding scope for the array
+       * element associated with a given template instance.
+       */
+      as: {
+        type: String,
+        value: 'item'
+      },
+
+      /**
+       * The name of the variable to add to the binding scope with the index
+       * for the row.  If `sort` is provided, the index will reflect the
+       * sorted order (rather than the original array order).
+       */
+      indexAs: {
+        type: String,
+        value: 'index'
+      },
+
+      /**
+       * The name of the variable to add to the binding scope to indicate
+       * if the row is selected.
+       */
+      selectedAs: {
+        type: String,
+        value: 'selected'
+      },
+
+      /**
+       * When true, tapping a row will select the item, placing its data model
+       * in the set of selected items retrievable via the selection property.
+       *
+       * Note that tapping focusable elements within the list item will not
+       * result in selection, since they are presumed to have their * own action.
+       */
+      selectionEnabled: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * When `multiSelection` is false, this is the currently selected item, or `null`
+       * if no item is selected.
+       */
+      selectedItem: {
+        type: Object,
+        notify: true
+      },
+
+      /**
+       * When `multiSelection` is true, this is an array that contains the selected items.
+       */
+      selectedItems: {
+        type: Object,
+        notify: true
+      },
+
+      /**
+       * When `true`, multiple items may be selected at once (in this case,
+       * `selected` is an array of currently selected items).  When `false`,
+       * only one item may be selected at a time.
+       */
+      multiSelection: {
+        type: Boolean,
+        value: false
+      }
+    },
+
+    observers: [
+      '_itemsChanged(items.*)',
+      '_selectionEnabledChanged(selectionEnabled)',
+      '_multiSelectionChanged(multiSelection)'
+    ],
+
+    behaviors: [
+      Polymer.Templatizer,
+      Polymer.IronResizableBehavior
+    ],
+
+    listeners: {
+      'iron-resize': '_resizeHandler'
+    },
+
+    /**
+     * The ratio of hidden tiles that should remain in the scroll direction.
+     * Recommended value ~0.5, so it will distribute tiles evely in both directions.
+     */
+    _ratio: 0.5,
+
+    /**
+     * The element that controls the scroll
+     * @type {?Element}
+     */
+    _scroller: null,
+
+    /**
+     * The padding-top value of the `scroller` element
+     */
+    _scrollerPaddingTop: 0,
+
+    /**
+     * This value is the same as `scrollTop`.
+     */
+    _scrollPosition: 0,
+
+    /**
+     * The number of tiles in the DOM.
+     */
+    _physicalCount: 0,
+
+    /**
+     * The k-th tile that is at the top of the scrolling list.
+     */
+    _physicalStart: 0,
+
+    /**
+     * The k-th tile that is at the bottom of the scrolling list.
+     */
+    _physicalEnd: 0,
+
+    /**
+     * The sum of the heights of all the tiles in the DOM.
+     */
+    _physicalSize: 0,
+
+    /**
+     * The average `offsetHeight` of the tiles observed till now.
+     */
+    _physicalAverage: 0,
+
+    /**
+     * The number of tiles which `offsetHeight` > 0 observed until now.
+     */
+    _physicalAverageCount: 0,
+
+    /**
+     * The Y position of the item rendered in the `_physicalStart`
+     * tile relative to the scrolling list.
+     */
+    _physicalTop: 0,
+
+    /**
+     * The number of items in the list.
+     */
+    _virtualCount: 0,
+
+    /**
+     * The n-th item rendered in the `_physicalStart` tile.
+     */
+    _virtualStartVal: 0,
+
+    /**
+     * A map between an item key and its physical item index
+     */
+    _physicalIndexForKey: null,
+
+    /**
+     * The estimated scroll height based on `_physicalAverage`
+     */
+    _estScrollHeight: 0,
+
+    /**
+     * The scroll height of the dom node
+     */
+    _scrollHeight: 0,
+
+    /**
+     * The size of the viewport
+     */
+    _viewportSize: 0,
+
+    /**
+     * An array of DOM nodes that are currently in the tree
+     * @type {?Array<!TemplatizerNode>}
+     */
+    _physicalItems: null,
+
+    /**
+     * An array of heights for each item in `_physicalItems`
+     * @type {?Array<number>}
+     */
+    _physicalSizes: null,
+
+    /**
+     * A cached value for the visible index.
+     * See `firstVisibleIndex`
+     * @type {?number}
+     */
+    _firstVisibleIndexVal: null,
+
+    /**
+     * A Polymer collection for the items.
+     * @type {?Polymer.Collection}
+     */
+    _collection: null,
+
+    /**
+     * True if the current item list was rendered for the first time
+     * after attached.
+     */
+    _itemsRendered: false,
+
+    /**
+     * The bottom of the physical content.
+     */
+    get _physicalBottom() {
+      return this._physicalTop + this._physicalSize;
+    },
+
+    /**
+     * The n-th item rendered in the last physical item.
+     */
+    get _virtualEnd() {
+      return this._virtualStartVal + this._physicalCount - 1;
+    },
+
+    /**
+     * The lowest n-th value for an item such that it can be rendered in `_physicalStart`.
+     */
+    _minVirtualStart: 0,
+
+    /**
+     * The largest n-th value for an item such that it can be rendered in `_physicalStart`.
+     */
+    get _maxVirtualStart() {
+      return this._virtualCount < this._physicalCount ?
+          this._virtualCount : this._virtualCount - this._physicalCount;
+    },
+
+    /**
+     * The height of the physical content that isn't on the screen.
+     */
+    get _hiddenContentSize() {
+      return this._physicalSize - this._viewportSize;
+    },
+
+    /**
+     * The maximum scroll top value.
+     */
+    get _maxScrollTop() {
+      return this._estScrollHeight - this._viewportSize;
+    },
+
+    /**
+     * Sets the n-th item rendered in `_physicalStart`
+     */
+    set _virtualStart(val) {
+      // clamp the value so that _minVirtualStart <= val <= _maxVirtualStart
+      this._virtualStartVal = Math.min(this._maxVirtualStart, Math.max(this._minVirtualStart, val));
+      this._physicalStart = this._virtualStartVal % this._physicalCount;
+      this._physicalEnd = (this._physicalStart + this._physicalCount - 1) % this._physicalCount;
+    },
+
+    /**
+     * Gets the n-th item rendered in `_physicalStart`
+     */
+    get _virtualStart() {
+      return this._virtualStartVal;
+    },
+
+    /**
+     * An optimal physical size such that we will have enough physical items
+     * to fill up the viewport and recycle when the user scrolls.
+     *
+     * This default value assumes that we will at least have the equivalent
+     * to a viewport of physical items above and below the user's viewport.
+     */
+    get _optPhysicalSize() {
+      return this._viewportSize * 3;
+    },
+
+   /**
+    * True if the current list is visible.
+    */
+    get _isVisible() {
+      return this._scroller && Boolean(this._scroller.offsetWidth || this._scroller.offsetHeight);
+    },
+
+    /**
+     * Gets the first visible item in the viewport.
+     *
+     * @property firstVisibleIndex
+     */
+    get firstVisibleIndex() {
+      var physicalOffset;
+
+      if (this._firstVisibleIndexVal === null) {
+        physicalOffset = this._physicalTop;
+
+        this._firstVisibleIndexVal = this._iterateItems(
+          function(pidx, vidx) {
+            physicalOffset += this._physicalSizes[pidx];
+
+            if (physicalOffset > this._scrollPosition) {
+              return vidx;
+            }
+          }) || 0;
+      }
+
+      return this._firstVisibleIndexVal;
+    },
+
+    ready: function() {
+      if (IOS_TOUCH_SCROLLING) {
+        this._scrollListener = function() {
+          requestAnimationFrame(this._scrollHandler.bind(this));
+        }.bind(this);
+      } else {
+        this._scrollListener = this._scrollHandler.bind(this);
+      }
+    },
+
+    /**
+     * When the element has been attached to the DOM tree.
+     */
+    attached: function() {
+      // delegate to the parent's scroller
+      // e.g. paper-scroll-header-panel
+      var el = Polymer.dom(this);
+
+      var parentNode = /** @type {?{scroller: ?Element}} */ (el.parentNode);
+      if (parentNode && parentNode.scroller) {
+        this._scroller = parentNode.scroller;
+      } else {
+        this._scroller = this;
+        this.classList.add('has-scroller');
+      }
+
+      if (IOS_TOUCH_SCROLLING) {
+        this._scroller.style.webkitOverflowScrolling = 'touch';
+      }
+
+      this._scroller.addEventListener('scroll', this._scrollListener);
+
+      this.updateViewportBoundaries();
+      this._render();
+    },
+
+    /**
+     * When the element has been removed from the DOM tree.
+     */
+    detached: function() {
+      this._itemsRendered = false;
+      if (this._scroller) {
+        this._scroller.removeEventListener('scroll', this._scrollListener);
+      }
+    },
+
+    /**
+     * Invoke this method if you dynamically update the viewport's
+     * size or CSS padding.
+     *
+     * @method updateViewportBoundaries
+     */
+    updateViewportBoundaries: function() {
+      var scrollerStyle = window.getComputedStyle(this._scroller);
+      this._scrollerPaddingTop = parseInt(scrollerStyle['padding-top'], 10);
+      this._viewportSize = this._scroller.offsetHeight;
+    },
+
+    /**
+     * Update the models, the position of the
+     * items in the viewport and recycle tiles as needed.
+     */
+    _refresh: function() {
+      var SCROLL_DIRECTION_UP = -1;
+      var SCROLL_DIRECTION_DOWN = 1;
+      var SCROLL_DIRECTION_NONE = 0;
+
+      // clamp the `scrollTop` value
+      // IE 10|11 scrollTop may go above `_maxScrollTop`
+      // iOS `scrollTop` may go below 0 and above `_maxScrollTop`
+      var scrollTop = Math.max(0, Math.min(this._maxScrollTop, this._scroller.scrollTop));
+
+      var tileHeight, kth, recycledTileSet;
+      var ratio = this._ratio;
+      var delta = scrollTop - this._scrollPosition;
+      var direction = SCROLL_DIRECTION_NONE;
+      var recycledTiles = 0;
+      var hiddenContentSize = this._hiddenContentSize;
+      var currentRatio = ratio;
+      var movingUp = [];
+
+      // track the last `scrollTop`
+      this._scrollPosition = scrollTop;
+
+      // clear cached visible index
+      this._firstVisibleIndexVal = null;
+
+      // random access
+      if (Math.abs(delta) > this._physicalSize) {
+        this._physicalTop += delta;
+        direction = SCROLL_DIRECTION_NONE;
+        recycledTiles =  Math.round(delta / this._physicalAverage);
+      }
+      // scroll up
+      else if (delta < 0) {
+        var topSpace = scrollTop - this._physicalTop;
+        var virtualStart = this._virtualStart;
+
+        direction = SCROLL_DIRECTION_UP;
+        recycledTileSet = [];
+
+        kth = this._physicalEnd;
+        currentRatio = topSpace / hiddenContentSize;
+
+        // move tiles from bottom to top
+        while (
+            // approximate `currentRatio` to `ratio`
+            currentRatio < ratio &&
+            // recycle less physical items than the total
+            recycledTiles < this._physicalCount &&
+            // ensure that these recycled tiles are needed
+            virtualStart - recycledTiles > 0
+        ) {
+
+          tileHeight = this._physicalSizes[kth] || this._physicalAverage;
+          currentRatio += tileHeight / hiddenContentSize;
+
+          recycledTileSet.push(kth);
+          recycledTiles++;
+          kth = (kth === 0) ? this._physicalCount - 1 : kth - 1;
+        }
+
+        movingUp = recycledTileSet;
+        recycledTiles = -recycledTiles;
+
+      }
+      // scroll down
+      else if (delta > 0) {
+        var bottomSpace = this._physicalBottom - (scrollTop + this._viewportSize);
+        var virtualEnd = this._virtualEnd;
+        var lastVirtualItemIndex = this._virtualCount-1;
+
+        direction = SCROLL_DIRECTION_DOWN;
+        recycledTileSet = [];
+
+        kth = this._physicalStart;
+        currentRatio = bottomSpace / hiddenContentSize;
+
+        // move tiles from top to bottom
+        while (
+            // approximate `currentRatio` to `ratio`
+            currentRatio < ratio &&
+            // recycle less physical items than the total
+            recycledTiles < this._physicalCount &&
+            // ensure that these recycled tiles are needed
+            virtualEnd + recycledTiles < lastVirtualItemIndex
+          ) {
+
+          tileHeight = this._physicalSizes[kth] || this._physicalAverage;
+          currentRatio += tileHeight / hiddenContentSize;
+
+          this._physicalTop += tileHeight;
+          recycledTileSet.push(kth);
+          recycledTiles++;
+          kth = (kth + 1) % this._physicalCount;
+        }
+      }
+
+      if (recycledTiles !== 0) {
+        this._virtualStart = this._virtualStart + recycledTiles;
+        this._update(recycledTileSet, movingUp);
+      }
+    },
+
+    /**
+     * Update the list of items, starting from the `_virtualStartVal` item.
+     * @param {!Array<number>=} itemSet
+     * @param {!Array<number>=} movingUp
+     */
+    _update: function(itemSet, movingUp) {
+      // update models
+      this._assignModels(itemSet);
+
+      // measure heights
+      // TODO(blasten) pass `recycledTileSet`
+      this._updateMetrics();
+
+      // adjust offset after measuring
+      if (movingUp) {
+        while (movingUp.length) {
+          this._physicalTop -= this._physicalSizes[movingUp.pop()];
+        }
+      }
+
+      // update the position of the items
+      this._positionItems();
+
+      // set the scroller size
+      this._updateScrollerSize();
+
+      // increase the pool of physical items if needed
+      if (this._increasePoolIfNeeded()) {
+        // set models to the new items
+        this.async(this._update);
+      }
+    },
+
+    /**
+     * Creates a pool of DOM elements and attaches them to the local dom.
+     */
+    _createPool: function(size) {
+      var physicalItems = new Array(size);
+
+      this._ensureTemplatized();
+
+      for (var i = 0; i < size; i++) {
+        var inst = this.stamp(null);
+
+        // First element child is item; Safari doesn't support children[0]
+        // on a doc fragment
+        physicalItems[i] = inst.root.querySelector('*');
+        Polymer.dom(this).appendChild(inst.root);
+      }
+
+      return physicalItems;
+    },
+
+    /**
+     * Increases the pool size. That is, the physical items in the DOM.
+     * This function will allocate additional physical items
+     * (limited by `MAX_PHYSICAL_COUNT`) if the content size is shorter than
+     * `_optPhysicalSize`
+     *
+     * @return boolean
+     */
+    _increasePoolIfNeeded: function() {
+      if (this._physicalSize >= this._optPhysicalSize || this._physicalAverage === 0) {
+        return false;
+      }
+
+      // the estimated number of physical items that we will need to reach
+      // the cap established by `_optPhysicalSize`.
+      var missingItems = Math.round(
+          (this._optPhysicalSize - this._physicalSize) * 1.2 / this._physicalAverage
+        );
+
+      // limit the size
+      var nextPhysicalCount = Math.min(
+          this._physicalCount + missingItems,
+          this._virtualCount,
+          MAX_PHYSICAL_COUNT
+        );
+
+      var prevPhysicalCount = this._physicalCount;
+      var delta = nextPhysicalCount - prevPhysicalCount;
+
+      if (delta <= 0) {
+        return false;
+      }
+
+      var newPhysicalItems = this._createPool(delta);
+      var emptyArray = new Array(delta);
+
+      [].push.apply(this._physicalItems, newPhysicalItems);
+      [].push.apply(this._physicalSizes, emptyArray);
+
+      this._physicalCount = prevPhysicalCount + delta;
+ 
+      return true;
+    },
+
+    /**
+     * Render a new list of items. This method does exactly the same as `update`,
+     * but it also ensures that only one `update` cycle is created.
+     */
+    _render: function() {
+      var requiresUpdate = this._virtualCount > 0 || this._physicalCount > 0;
+
+      if (this.isAttached && !this._itemsRendered && this._isVisible && requiresUpdate)  {
+        this._update();
+        this._itemsRendered = true;
+      }
+    },
+
+    /**
+     * Templetizes the user template.
+     */
+    _ensureTemplatized: function() {
+      if (!this.ctor) {
+        // Template instance props that should be excluded from forwarding
+        var props = {};
+
+        props.__key__ = true;
+        props[this.as] = true;
+        props[this.indexAs] = true;
+        props[this.selectedAs] = true;
+
+        this._instanceProps = props;
+        this._userTemplate = Polymer.dom(this).querySelector('template');
+
+        if (this._userTemplate) {
+          this.templatize(this._userTemplate);
+        } else {
+          console.warn('iron-list requires a template to be provided in light-dom');
+        }
+      }
+    },
+
+    /**
+     * Implements extension point from Templatizer mixin.
+     */
+    _getStampedChildren: function() {
+      return this._physicalItems;
+    },
+
+    /**
+     * Implements extension point from Templatizer
+     * Called as a side effect of a template instance path change, responsible
+     * for notifying items.<key-for-instance>.<path> change up to host.
+     */
+    _forwardInstancePath: function(inst, path, value) {
+      if (path.indexOf(this.as + '.') === 0) {
+        this.notifyPath('items.' + inst.__key__ + '.' +
+          path.slice(this.as.length + 1), value);
+      }
+    },
+
+    /**
+     * Implements extension point from Templatizer mixin
+     * Called as side-effect of a host property change, responsible for
+     * notifying parent path change on each row.
+     */
+    _forwardParentProp: function(prop, value) {
+      if (this._physicalItems) {
+        this._physicalItems.forEach(function(item) {
+          item._templateInstance[prop] = value;
+        }, this);
+      }
+    },
+
+    /**
+     * Implements extension point from Templatizer
+     * Called as side-effect of a host path change, responsible for
+     * notifying parent.<path> path change on each row.
+     */
+    _forwardParentPath: function(path, value) {
+      if (this._physicalItems) {
+        this._physicalItems.forEach(function(item) {
+          item._templateInstance.notifyPath(path, value, true);
+        }, this);
+      }
+    },
+
+    /**
+     * Called as a side effect of a host items.<key>.<path> path change,
+     * responsible for notifying item.<path> changes to row for key.
+     */
+    _forwardItemPath: function(path, value) {
+      if (this._physicalIndexForKey) {
+        var dot = path.indexOf('.');
+        var key = path.substring(0, dot < 0 ? path.length : dot);
+        var idx = this._physicalIndexForKey[key];
+        var row = this._physicalItems[idx];
+        if (row) {
+          var inst = row._templateInstance;
+          if (dot >= 0) {
+            path = this.as + '.' + path.substring(dot+1);
+            inst.notifyPath(path, value, true);
+          } else {
+            inst[this.as] = value;
+          }
+        }
+      }
+    },
+
+    /**
+     * Called when the items have changed. That is, ressignments
+     * to `items`, splices or updates to a single item.
+     */
+    _itemsChanged: function(change) {
+      if (change.path === 'items') {
+        // render the new set
+        this._itemsRendered = false;
+
+        // update the whole set
+        this._virtualStartVal = 0;
+        this._physicalTop = 0;
+        this._virtualCount = this.items ? this.items.length : 0;
+        this._collection = this.items ? Polymer.Collection.get(this.items) : null;
+        this._physicalIndexForKey = {};
+
+        // scroll to the top
+        this._resetScrollPosition(0);
+
+        // create the initial physical items
+        if (!this._physicalItems) {
+          this._physicalCount = Math.max(1, Math.min(DEFAULT_PHYSICAL_COUNT, this._virtualCount));
+          this._physicalItems = this._createPool(this._physicalCount);
+          this._physicalSizes = new Array(this._physicalCount);
+        }
+
+        this.debounce('refresh', this._render);
+
+      } else if (change.path === 'items.splices') {
+        // render the new set
+        this._itemsRendered = false;
+
+        this._adjustVirtualIndex(change.value.indexSplices);
+        this._virtualCount = this.items ? this.items.length : 0;
+
+        this.debounce('refresh', this._render);
+
+      } else {
+        // update a single item
+        this._forwardItemPath(change.path.split('.').slice(1).join('.'), change.value);
+      }
+    },
+
+    /**
+     * @param {!Array<!PolymerSplice>} splices
+     */
+    _adjustVirtualIndex: function(splices) {
+      var i, splice, idx;
+
+      for (i = 0; i < splices.length; i++) {
+        splice = splices[i];
+
+        // deselect removed items
+        splice.removed.forEach(this.$.selector.deselect, this.$.selector);
+
+        idx = splice.index;
+        // We only need to care about changes happening above the current position
+        if (idx >= this._virtualStartVal) {
+          break;
+        }
+
+        this._virtualStart = this._virtualStart +
+            Math.max(splice.addedCount - splice.removed.length, idx - this._virtualStartVal);
+      }
+    },
+
+    _scrollHandler: function() {
+      this._refresh();
+    },
+
+    /**
+     * Executes a provided function per every physical index in `itemSet`
+     * `itemSet` default value is equivalent to the entire set of physical indexes.
+     * 
+     * @param {!function(number, number)} fn
+     * @param {!Array<number>=} itemSet
+     */
+    _iterateItems: function(fn, itemSet) {
+      var pidx, vidx, rtn, i;
+
+      if (arguments.length === 2 && itemSet) {
+        for (i = 0; i < itemSet.length; i++) {
+          pidx = itemSet[i];
+          if (pidx >= this._physicalStart) {
+            vidx = this._virtualStartVal + (pidx - this._physicalStart);
+          } else {
+            vidx = this._virtualStartVal + (this._physicalCount - this._physicalStart) + pidx;
+          }
+          if ((rtn = fn.call(this, pidx, vidx)) != null) {
+            return rtn;
+          }
+        }
+      } else {
+        pidx = this._physicalStart;
+        vidx = this._virtualStartVal;
+
+        for (; pidx < this._physicalCount; pidx++, vidx++) {
+          if ((rtn = fn.call(this, pidx, vidx)) != null) {
+            return rtn;
+          }
+        }
+
+        pidx = 0;
+
+        for (; pidx < this._physicalStart; pidx++, vidx++) {
+          if ((rtn = fn.call(this, pidx, vidx)) != null) {
+            return rtn;
+          }
+        }
+      }
+    },
+
+    /**
+     * Assigns the data models to a given set of items.
+     * @param {!Array<number>=} itemSet
+     */
+    _assignModels: function(itemSet) {
+      this._iterateItems(function(pidx, vidx) {
+        var el = this._physicalItems[pidx];
+        var inst = el._templateInstance;
+        var item = this.items && this.items[vidx];
+
+        if (item) {
+          inst[this.as] = item;
+          inst.__key__ = this._collection.getKey(item);
+          inst[this.selectedAs] =
+            /** @type {!ArraySelectorElement} */ (this.$.selector).isSelected(item);
+          inst[this.indexAs] = vidx;
+          el.removeAttribute('hidden');
+          this._physicalIndexForKey[inst.__key__] = pidx;
+        } else {
+          inst.__key__ = null;
+          el.setAttribute('hidden', '');
+        }
+
+      }, itemSet);
+    },
+
+    /**
+     * Updates the height for a given set of items.
+     */
+    _updateMetrics: function() {
+      var total = 0;
+      var prevAvgCount = this._physicalAverageCount;
+      var prevPhysicalAvg = this._physicalAverage;
+
+      // Make sure we distributed all the physical items
+      // so we can measure them
+      Polymer.dom.flush();
+
+      for (var i = 0; i < this._physicalCount; i++) {
+        this._physicalSizes[i] = this._physicalItems[i].offsetHeight;
+        total += this._physicalSizes[i];
+        this._physicalAverageCount += this._physicalSizes[i] ? 1 : 0;
+      }
+
+      this._physicalSize = total;
+      this._viewportSize = this._scroller.offsetHeight;
+
+      if (this._physicalAverageCount !== prevAvgCount) {
+        this._physicalAverage = Math.round(
+            ((prevPhysicalAvg * prevAvgCount) + total) /
+            this._physicalAverageCount);
+      }
+    },
+
+    /**
+     * Updates the position of the physical items.
+     */
+    _positionItems: function() {
+      this._adjustScrollPosition();
+
+      var y = this._physicalTop;
+
+      this._iterateItems(function(pidx) {
+
+        this.transform('translate3d(0, ' + y + 'px, 0)', this._physicalItems[pidx]);
+        y += this._physicalSizes[pidx];
+
+      });
+    },
+
+    /**
+     * Adjusts the scroll position when it was overestimated.
+     */
+    _adjustScrollPosition: function() {
+      var deltaHeight = this._virtualStartVal === 0 ? this._physicalTop :
+          Math.min(this._scrollPosition + this._physicalTop, 0);
+
+      if (deltaHeight) {
+        this._physicalTop = this._physicalTop - deltaHeight;
+
+        // juking scroll position during interial scrolling on iOS is no bueno
+        if (!IOS_TOUCH_SCROLLING) {
+          this._resetScrollPosition(this._scroller.scrollTop - deltaHeight);
+        }
+      }
+    },
+
+    /**
+     * Sets the position of the scroll.
+     */
+    _resetScrollPosition: function(pos) {
+      if (this._scroller) {
+        this._scroller.scrollTop = pos;
+        this._scrollPosition = this._scroller.scrollTop;
+      }
+    },
+
+    /**
+     * Sets the scroll height, that's the height of the content,
+     */
+    _updateScrollerSize: function(forceUpdate) {
+      this._estScrollHeight = (this._physicalBottom +
+          Math.max(this._virtualCount - this._physicalCount - this._virtualStartVal, 0) * this._physicalAverage);
+
+      forceUpdate = forceUpdate || this._scrollHeight === 0;
+      forceUpdate = forceUpdate || this._scrollPosition >= this._estScrollHeight - this._physicalSize;
+
+      // amortize height adjustment, so it won't trigger repaints very often
+      if (forceUpdate || Math.abs(this._estScrollHeight - this._scrollHeight) >= this._optPhysicalSize) {
+        this.$.items.style.height = this._estScrollHeight + 'px';
+        this._scrollHeight = this._estScrollHeight;
+      }
+    },
+
+    /**
+     * Scroll to a specific item in the virtual list regardless
+     * of the physical items in the DOM tree.
+     *
+     * @method scrollToIndex
+     * @param {number} idx The index of the item
+     */
+    scrollToIndex: function(idx) {
+      if (typeof idx !== 'number') {
+        return;
+      }
+
+      var firstVisible = this.firstVisibleIndex;
+
+      idx = Math.min(Math.max(idx, 0), this._virtualCount-1);
+
+      // start at the previous virtual item
+      // so we have a item above the first visible item
+      this._virtualStart = idx - 1;
+
+      // assign new models
+      this._assignModels();
+
+      // measure the new sizes
+      this._updateMetrics();
+
+      // estimate new physical offset
+      this._physicalTop = this._virtualStart * this._physicalAverage;
+
+      var currentTopItem = this._physicalStart;
+      var currentVirtualItem = this._virtualStart;
+      var targetOffsetTop = 0;
+      var hiddenContentSize = this._hiddenContentSize;
+
+      // scroll to the item as much as we can
+      while (currentVirtualItem !== idx && targetOffsetTop < hiddenContentSize) {
+        targetOffsetTop = targetOffsetTop + this._physicalSizes[currentTopItem];
+        currentTopItem = (currentTopItem + 1) % this._physicalCount;
+        currentVirtualItem++;
+      }
+
+      // update the scroller size
+      this._updateScrollerSize(true);
+
+      // update the position of the items
+      this._positionItems();
+
+      // set the new scroll position
+      this._resetScrollPosition(this._physicalTop + targetOffsetTop + 1);
+
+      // increase the pool of physical items if needed
+      if (this._increasePoolIfNeeded()) {
+        // set models to the new items
+        this.async(this._update);
+      }
+
+      // clear cached visible index
+      this._firstVisibleIndexVal = null;
+    },
+
+    /**
+     * Reset the physical average and the average count.
+     */
+    _resetAverage: function() {
+      this._physicalAverage = 0;
+      this._physicalAverageCount = 0;
+    },
+
+    /**
+     * A handler for the `resize` event triggered by `IronResizableBehavior`
+     * when the element is resized.
+     */
+    _resizeHandler: function() {
+      this.debounce('resize', function() {
+        this._render();
+        if (this._itemsRendered && this._physicalItems && this._isVisible) {
+          this._resetAverage();
+          this.updateViewportBoundaries();
+          this.scrollToIndex(this.firstVisibleIndex);
+        }
+      });
+    },
+
+    _getModelFromItem: function(item) {
+      var key = this._collection.getKey(item);
+      var pidx = this._physicalIndexForKey[key];
+
+      if (pidx !== undefined) {
+        return this._physicalItems[pidx]._templateInstance;
+      }
+      return null;
+    },
+
+    /**
+     * Select the list item at the given index.
+     *
+     * @method selectItem
+     * @param {(Object|number)} item the item object or its index
+     */
+    selectItem: function(item) {
+      if (typeof item === 'number') {
+        item = this.items[item];
+        if (!item) {
+          throw new RangeError('<item> not found');
+        }
+      } else {
+        if (this._collection.getKey(item) === undefined) {
+          throw new TypeError('<item> should be a valid item');
+        }
+      }
+
+      var model = this._getModelFromItem(item);
+
+      if (!this.multiSelection && this.selectedItem) {
+        this.deselectItem(this.selectedItem);
+      }
+      if (model) {
+        model[this.selectedAs] = true;
+      }
+      this.$.selector.select(item);
+    },
+
+    /**
+     * Deselects the given item list if it is already selected.
+     *
+     * @method deselect
+     * @param {(Object|number)} item the item object or its index
+     */
+    deselectItem: function(item) {
+      if (typeof item === 'number') {
+        item = this.items[item];
+        if (!item) {
+          throw new RangeError('<item> not found');
+        }
+      } else {
+        if (this._collection.getKey(item) === undefined) {
+          throw new TypeError('<item> should be a valid item');
+        }
+      }
+
+      var model = this._getModelFromItem(item);
+
+      if (model) {
+        model[this.selectedAs] = false;
+      }
+      this.$.selector.deselect(item);
+    },
+
+    /**
+     * Select or deselect a given item depending on whether the item
+     * has already been selected.
+     *
+     * @method toggleSelectionForItem
+     * @param {(Object|number)} item the item object or its index
+     */
+    toggleSelectionForItem: function(item) {
+      item = typeof item === 'number' ? this.items[item] : item;
+      if (/** @type {!ArraySelectorElement} */ (this.$.selector).isSelected(item)) {
+        this.deselectItem(item);
+      } else {
+        this.selectItem(item);
+      }
+    },
+
+    /**
+     * Clears the current selection state of the list.
+     *
+     * @method clearSelection
+     */
+    clearSelection: function() {
+      function unselect(item) {
+        var model = this._getModelFromItem(item);
+        if (model) {
+          model[this.selectedAs] = false;
+        }
+      }
+
+      if (Array.isArray(this.selectedItems)) {
+        this.selectedItems.forEach(unselect, this);
+      } else if (this.selectedItem) {
+        unselect.call(this, this.selectedItem);
+      }
+
+      /** @type {!ArraySelectorElement} */ (this.$.selector).clearSelection();
+    },
+
+    /**
+     * Add an event listener to `tap` if `selectionEnabled` is true,
+     * it will remove the listener otherwise.
+     */
+    _selectionEnabledChanged: function(selectionEnabled) {
+      if (selectionEnabled) {
+        this.listen(this, 'tap', '_selectionHandler');
+        this.listen(this, 'keypress', '_selectionHandler');
+      } else {
+        this.unlisten(this, 'tap', '_selectionHandler');
+        this.unlisten(this, 'keypress', '_selectionHandler');
+      }
+    },
+
+    /**
+     * Select an item from an event object.
+     */
+    _selectionHandler: function(e) {
+      var ENTER_KEY = 13, model;
+      if (e.type !== 'keypress' || e.keyCode === ENTER_KEY) {
+        model = this.modelForElement(e.target);
+        if (model) {
+          this.toggleSelectionForItem(model[this.as]);
+        }
+      }
+    },
+
+    _multiSelectionChanged: function(multiSelection) {
+      this.clearSelection();
+      this.$.selector.multi = multiSelection;
+    }
+  });
+
+})();
 
 </script>
 <dom-module id="paper-drawer-panel" assetpath="../bower_components/paper-drawer-panel/">
@@ -19632,7 +21228,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </style>
 
   <template>
-    <span aria-live$="[[mode]]">[[_text]]</span>
+    <div aria-live$="[[mode]]">[[_text]]</div>
   </template>
 
   <script>
@@ -20665,8 +22261,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       .input-content.label-is-floating ::content label,
       .input-content.label-is-floating ::content .paper-input-label {
-        -webkit-transform: translate3d(0, -75%, 0) scale(0.75);
-        transform: translate3d(0, -75%, 0) scale(0.75);
+        -webkit-transform: translateY(-75%) scale(0.75);
+        transform: translateY(-75%) scale(0.75);
         -webkit-transform-origin: left top;
         transform-origin: left top;
         -webkit-transition: -webkit-transform 0.25s;
@@ -20704,6 +22300,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         background: transparent;
         border: none;
         color: var(--paper-input-container-input-color, --primary-text-color);
+        -webkit-appearance: none;
 
         @apply(--paper-font-subhead);
         @apply(--paper-input-container-input);
@@ -20801,7 +22398,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       /**
        * True if the input is invalid. This property is set automatically when the input value
-       * changes if auto-validating, or when the `iron-input-valid` event is heard from a child.
+       * changes if auto-validating, or when the `iron-input-validate` event is heard from a child.
        */
       invalid: {
         observer: '_invalidChanged',
@@ -21004,9 +22601,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           }
           // The label might have a horizontal offset if a prefix element exists
           // which needs to be undone when displayed as a floating label.
-          if (this.$.prefix && label && label.offsetParent &&
-              Polymer.dom(this.$.prefix).getDistributedNodes().length > 0) {
-           label.style.left = -label.offsetParent.offsetLeft + 'px';
+          if (Polymer.dom(this.$.prefix).getDistributedNodes().length > 0 &&
+              label && label.offsetParent) {
+            label.style.left = -label.offsetParent.offsetLeft + 'px';
           }
         } else {
           // When the label is not floating, it should overlap the input element.
@@ -21050,12 +22647,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       :host {
         display: inline-block;
         visibility: hidden;
-        float: left;
 
         color: var(--paper-input-container-invalid-color, --google-red-500);
 
         @apply(--paper-font-caption);
         @apply(--paper-input-error);
+        position: absolute;
       }
 
       :host([invalid]) {
@@ -21064,7 +22661,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </style>
 
     <content></content>
-
+    
   </template>
 </dom-module>
 
@@ -21173,7 +22770,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       <label hidden$="[[!label]]">[[label]]</label>
 
-      <input is="iron-input" id="input" aria-labelledby$="[[_ariaLabelledBy]]" aria-describedby$="[[_ariaDescribedBy]]" disabled$="[[disabled]]" bind-value="{{value}}" invalid="{{invalid}}" prevent-invalid-input="[[preventInvalidInput]]" allowed-pattern="[[allowedPattern]]" validator="[[validator]]" type$="[[type]]" pattern$="[[pattern]]" required$="[[required]]" autocomplete$="[[autocomplete]]" autofocus$="[[autofocus]]" inputmode$="[[inputmode]]" minlength$="[[minlength]]" maxlength$="[[maxlength]]" min$="[[min]]" max$="[[max]]" step$="[[step]]" name$="[[name]]" placeholder$="[[placeholder]]" readonly$="[[readonly]]" list$="[[list]]" size$="[[size]]" autocapitalize$="[[autocapitalize]]" autocorrect$="[[autocorrect]]" on-change="_onChange">
+      <input is="iron-input" id="input" aria-labelledby$="[[_ariaLabelledBy]]" aria-describedby$="[[_ariaDescribedBy]]" disabled$="[[disabled]]" bind-value="{{value}}" invalid="{{invalid}}" prevent-invalid-input="[[preventInvalidInput]]" allowed-pattern="[[allowedPattern]]" validator="[[validator]]" type$="[[type]]" pattern$="[[pattern]]" required$="[[required]]" autocomplete$="[[autocomplete]]" autofocus$="[[autofocus]]" inputmode$="[[inputmode]]" minlength$="[[minlength]]" maxlength$="[[maxlength]]" min$="[[min]]" max$="[[max]]" step$="[[step]]" name$="[[name]]" placeholder$="[[placeholder]]" readonly$="[[readonly]]" list$="[[list]]" size$="[[size]]" autocapitalize$="[[autocapitalize]]" autocorrect$="[[autocorrect]]" on-change="_onChange" autosave$="[[autosave]]" ,="" results$="[[results]]">
 
       <content select="[suffix]"></content>
 
@@ -22056,6 +23653,269 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     Polymer.PaperMenuButton = PaperMenuButton;
   })();
 </script>
+<dom-module id="paper-progress" assetpath="../bower_components/paper-progress/">
+  <style>
+    :host {
+      display: block;
+      width: 200px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #progressContainer {
+      position: relative;
+    }
+
+    #progressContainer,
+    /* the stripe for the indeterminate animation*/
+    .indeterminate:after {
+      height: var(--paper-progress-height, 4px);
+    }
+
+    #primaryProgress,
+    #secondaryProgress,
+    .indeterminate:after {
+      @apply(--layout-fit);
+    }
+
+    #progressContainer,
+    .indeterminate:after {
+      background-color: var(--paper-progress-container-color, --google-grey-300);
+    }
+
+    :host(.transiting) #primaryProgress,
+    :host(.transiting) #secondaryProgress {
+      -webkit-transition-property: -webkit-transform;
+      transition-property: transform;
+
+      /* Duration */
+      -webkit-transition-duration: var(--paper-progress-transition-duration, 0.08s);
+      transition-duration: var(--paper-progress-transition-duration, 0.08s);
+
+      /* Timing function */
+      -webkit-transition-timing-function: var(--paper-progress-transition-timing-function, ease);
+      transition-timing-function: var(--paper-progress-transition-timing-function, ease);
+
+      /* Delay */
+      -webkit-transition-delay: var(--paper-progress-transition-delay, 0s);
+      transition-delay: var(--paper-progress-transition-delay, 0s);
+    }
+
+    #primaryProgress,
+    #secondaryProgress {
+      @apply(--layout-fit);
+      -webkit-transform-origin: left center;
+      transform-origin: left center;
+      -webkit-transform: scaleX(0);
+      transform: scaleX(0);
+      will-change: transform;
+    }
+
+    #primaryProgress {
+      background-color: var(--paper-progress-active-color, --google-green-500);
+    }
+
+    #secondaryProgress {
+      position: relative;
+      background-color: var(--paper-progress-secondary-color, --google-green-100);
+    }
+
+    :host([disabled]) #primaryProgress {
+      background-color: var(--paper-progress-disabled-active-color, --google-grey-500);
+    }
+
+    :host([disabled]) #secondaryProgress {
+      background-color: var(--paper-progress-disabled-active-color, --google-grey-300);
+    }
+
+    :host(:not([disabled])) #primaryProgress.indeterminate {
+      -webkit-transform-origin: right center;
+      transform-origin: right center;
+      -webkit-animation: indeterminate-bar 2s linear infinite;
+      animation: indeterminate-bar 2s linear infinite;
+    }
+
+    :host(:not([disabled])) #primaryProgress.indeterminate:after {
+      content: "";
+      -webkit-transform-origin: center center;
+      transform-origin: center center;
+
+      -webkit-animation: indeterminate-splitter 2s linear infinite;
+      animation: indeterminate-splitter 2s linear infinite;
+    }
+
+    @-webkit-keyframes indeterminate-bar {
+      0% {
+        -webkit-transform: scaleX(1) translateX(-100%);
+      }
+      50% {
+        -webkit-transform: scaleX(1) translateX(0%);
+      }
+      75% {
+        -webkit-transform: scaleX(1) translateX(0%);
+        -webkit-animation-timing-function: cubic-bezier(.28,.62,.37,.91);
+      }
+      100% {
+        -webkit-transform: scaleX(0) translateX(0%);
+      }
+    }
+
+    @-webkit-keyframes indeterminate-splitter {
+      0% {
+        -webkit-transform: scaleX(.75) translateX(-125%);
+      }
+      30% {
+        -webkit-transform: scaleX(.75) translateX(-125%);
+        -webkit-animation-timing-function: cubic-bezier(.42,0,.6,.8);
+      }
+      90% {
+        -webkit-transform: scaleX(.75) translateX(125%);
+      }
+      100% {
+        -webkit-transform: scaleX(.75) translateX(125%);
+      }
+    }
+
+    @keyframes indeterminate-bar {
+      0% {
+        transform: scaleX(1) translateX(-100%);
+      }
+      50% {
+        transform: scaleX(1) translateX(0%);
+      }
+      75% {
+        transform: scaleX(1) translateX(0%);
+        animation-timing-function: cubic-bezier(.28,.62,.37,.91);
+      }
+      100% {
+        transform: scaleX(0) translateX(0%);
+      }
+    }
+
+    @keyframes indeterminate-splitter {
+      0% {
+        transform: scaleX(.75) translateX(-125%);
+      }
+      30% {
+        transform: scaleX(.75) translateX(-125%);
+        animation-timing-function: cubic-bezier(.42,0,.6,.8);
+      }
+      90% {
+        transform: scaleX(.75) translateX(125%);
+      }
+      100% {
+        transform: scaleX(.75) translateX(125%);
+      }
+    }
+  </style>
+  <template>
+    <div id="progressContainer">
+      <div id="secondaryProgress" hidden$="[[_hideSecondaryProgress(secondaryRatio)]]"></div>
+      <div id="primaryProgress"></div>
+    </div>
+  </template>
+</dom-module>
+
+<script>
+  Polymer({
+
+    is: 'paper-progress',
+
+    behaviors: [
+      Polymer.IronRangeBehavior
+    ],
+
+    properties: {
+
+      /**
+       * The number that represents the current secondary progress.
+       */
+      secondaryProgress: {
+        type: Number,
+        value: 0
+      },
+
+      /**
+       * The secondary ratio
+       */
+      secondaryRatio: {
+        type: Number,
+        value: 0,
+        readOnly: true
+      },
+
+      /**
+       * Use an indeterminate progress indicator.
+       */
+      indeterminate: {
+        type: Boolean,
+        value: false,
+        observer: '_toggleIndeterminate'
+      },
+
+      /**
+       * True if the progress is disabled.
+       */
+      disabled: {
+        type: Boolean,
+        value: false,
+        reflectToAttribute: true,
+        observer: '_disabledChanged'
+      }
+    },
+
+    observers: [
+      '_progressChanged(secondaryProgress, value, min, max)'
+    ],
+
+    hostAttributes: {
+      role: 'progressbar'
+    },
+
+    _toggleIndeterminate: function(indeterminate) {
+      // If we use attribute/class binding, the animation sometimes doesn't translate properly
+      // on Safari 7.1. So instead, we toggle the class here in the update method.
+      this.toggleClass('indeterminate', indeterminate, this.$.primaryProgress);
+    },
+
+    _transformProgress: function(progress, ratio) {
+      var transform = 'scaleX(' + (ratio / 100) + ')';
+      progress.style.transform = progress.style.webkitTransform = transform;
+    },
+
+    _mainRatioChanged: function(ratio) {
+      this._transformProgress(this.$.primaryProgress, ratio);
+    },
+
+    _progressChanged: function(secondaryProgress, value, min, max) {
+      secondaryProgress = this._clampValue(secondaryProgress);
+      value = this._clampValue(value);
+
+      var secondaryRatio = this._calcRatio(secondaryProgress) * 100;
+      var mainRatio = this._calcRatio(value) * 100;
+
+      this._setSecondaryRatio(secondaryRatio);
+      this._transformProgress(this.$.secondaryProgress, secondaryRatio);
+      this._transformProgress(this.$.primaryProgress, mainRatio);
+
+      this.secondaryProgress = secondaryProgress;
+
+      this.setAttribute('aria-valuenow', value);
+      this.setAttribute('aria-valuemin', min);
+      this.setAttribute('aria-valuemax', max);
+    },
+
+    _disabledChanged: function(disabled) {
+      this.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    },
+
+    _hideSecondaryProgress: function(secondaryRatio) {
+      return secondaryRatio === 0;
+    }
+
+  });
+
+</script>
 <dom-module id="neon-animated-pages" assetpath="../bower_components/neon-animation/">
 
   <style>
@@ -22306,6 +24166,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       margin-left: 48px;
     }
 
+    #mainToolbar.main .middle-container {
+      height: 100%;
+      margin-left: 0px;
+    }
+
     #mainToolbar:not(.tall) .middle {
       font-size: 18px;
       padding-bottom: 0;
@@ -22321,8 +24186,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     #mainToolbar #mainMenu {
       --paper-menu-button: {
         padding: 0px;
-      };
+      }
+      ;
     }
+
     .tile {
       min-width: 380px;
       max-width: 50%;
@@ -22391,6 +24258,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       color: white;
     }
 
+    paper-progress.purple {
+      --paper-progress-active-color: var(--paper-purple-500);
+    }
+
     .tile.purple,
     #placeholder.purple {
       background-color: var(--paper-purple-300);
@@ -22411,6 +24282,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       background-color: var(--paper-green-300);
       color: white;
     }
+
+    paper-progress.green {
+      --paper-progress-active-color: var(--paper-green-500);
+    }
     /* ORANGE */
 
     #mainToolbar.orange,
@@ -22425,6 +24300,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     #placeholder.orange {
       background-color: var(--paper-orange-300);
       color: white;
+    }
+
+    paper-progress.orange {
+      --paper-progress-active-color: var(--paper-orange-500);
     }
     /* RED */
 
@@ -22441,6 +24320,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       background-color: var(--paper-red-300);
       color: white;
     }
+
+    paper-progress.red {
+      --paper-progress-active-color: var(--paper-red-500);
+    }
     /* BLUE */
 
     #mainToolbar.blue,
@@ -22456,6 +24339,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       background-color: var(--paper-blue-300);
       color: white;
     }
+
+    paper-progress.blue {
+      --paper-progress-active-color: var(--paper-blue-500);
+    }
     /* YELLOW */
 
     #mainToolbar.yellow,
@@ -22470,6 +24357,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     #placeholder.yellow {
       background-color: var(--paper-yellow-800);
       color: white;
+    }
+
+    paper-progress.yellow {
+      --paper-progress-active-color: var(--paper-yellow-900);
     }
     </style></template></dom-module><iron-iconset-svg name="category-icons" size="256">
   <svg>
@@ -22742,29 +24633,74 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </defs>
   </svg>
 </iron-iconset-svg>
+<iron-iconset-svg name="avatar-icons" size="128">
+  <svg>
+    <defs>
+      <g id="default">
+        <path fill="#FFCC80" d="M41.6 123.8s0 .1-.1.1l.3-.4c-.1.2-.1.2-.2.3z"></path>
+        <path fill="#8C9EFF" d="M0 0h128v128h-128z"></path>
+        <path fill="#C2C2C2" d="M34.8 79.5c-2.5-3.4-5.9-6.4-6.9-10.3v-.1l-.6-.5c-.3-1.2.6-2 .5-3l-2.4-1h-6.8999999999999995s0 17 17.4 17.3c-.9-.9-.7-1.8-1.1-2.4z"></path>
+        <path fill="#CFD8DC" d="M21.9 64.2l-.1-.3c0-.1 0-.2-.1-.4v-1l.1-.3c.1-.1.1-.2.1-.3.1-.1.1-.2.1-.2.2-.4.1-.8-.2-1.1-.4-.4-1-.4-1.3 0l-.2.2-.2.2c-.1.1-.2.2-.3.4l-.3.6-.3.6c-.1.2-.2.4-.2.7 0 .2-.1.5-.1.8v.5h3c.2-.2.1-.3 0-.4z"></path>
+        <path fill="#eee" d="M116.5 65.2c.1.1.2.1.2.2 0-.1-.1-.2-.2-.2zM124.7 71.3l.6.3c-.3-.1-.4-.2-.6-.3zM126.4 72.3l.6.3c-.2 0-.4-.1-.6-.3zM123 70.2l.5.3c-.2 0-.4-.2-.5-.3zM115 63.7zM114.9 127.8c-12-17.2-7.6-52-3.1-67.6v-.1c-3.5-4.2-7.8-11.7-10.2-18.7-1.7-5-4-8.8-6.4-11.8l-1.6-2-10.7 11.8c-1.5 2.1-3.3 1.8-4.1-.6l-7.1-17.3c-.3-.9-.3-1.9 0-2.7.3-1.1-.1-2.1.7-3l-2-.1c-1.3 0-2.5.1-3.7.3-1.7-.3-3.4-.5-5.1-.5-11.9 0-21.9 8.1-24.8 19.2-.5 1.8-.7 3.7-.8 5.6-1.2 3.6-4.2 7.7-11.5 8.4 1.3.4 2.2 1.9 2 3.6l-.5 2.8c-.3 2-1.2 2.4-2.2.9l1.6 8.6.2.9c.1 1.1.3 2.2.6 3.4 1 4 3.2 8.2 7.8 10.9.3.6 1 1.3 2 2.1 8.2 6.7 36 20.7 27.8 46.1h51.3c0-.1-.1-.1-.2-.2zm-80.4-68.5c.5 0 1 .4 1 1 0 .5-.4 1-1 1-.5 0-1-.4-1-1s.4-1 1-1zm7.4 3.9c.5 0 1 .4 1 1 0 .5-.4 1-1 1-.5 0-1-.4-1-1 0-.5.5-1 1-1zm-1-8.5c-.5 0-1-.4-1-1 0-.5.4-1 1-1 .5 0 1 .4 1 1s-.5 1-1 1zm3.9-10.9c-.9 0-1.6-.7-1.6-1.6 0-.9.7-1.6 1.6-1.6.9 0 1.6.7 1.6 1.6 0 .9-.7 1.6-1.6 1.6zM118.1 66.5c.1.1.2.2.4.3-.2-.1-.3-.2-.4-.3zM121.3 69.1l.5.3-.5-.3zM119.7 67.8l.4.3c-.1 0-.3-.1-.4-.3z"></path>
+        <path fill="#C2C2C2" d="M114.9 127.8l.2.2h12.9v-54.8l-1-.6-.6-.3-1.2-.7-.6-.3-1.2-.7-.5-.3-1.2-.8-.5-.3-1.2-.9-.4-.3-1.2-1c-.1-.1-.2-.2-.4-.3l-1.3-1.2c-.1-.1-.2-.1-.2-.2l-1.5-1.5c-1.5-1.6-3-3.3-4.4-5.1-4.6 15.4-13 52.7 4.3 69.1z"></path>
+        <path fill="#646464" d="M26 55.1l.4-2.8c.2-1.8-.6-3.2-2-3.6-.3-.1-.7-.2-1.1-.1-2 .1-2.7 1.9-1.6 3.8l1.8 3.3c.1.2.2.3.3.4 1 1.3 1.9 1 2.2-1z"></path>
+        <circle fill="#444" cx="44.8" cy="42.2" r="2"></circle>
+        <circle fill="#CFD8DC" cx="34.5" cy="60.3" r="1"></circle>
+        <circle fill="#CFD8DC" cx="40.9" cy="53.7" r="1"></circle>
+        <circle fill="#CFD8DC" cx="41.9" cy="64.2" r="1"></circle>
+        <path fill="#646464" d="M70.7 18.8c-.3.8-.3 1.8 0 2.7l8.1 19.3c.8 2.5 2.6 2.7 4.1.6l12.3-11.8 1.4-1.3c.3-.4.5-.9.6-1.3.4-1.2.3-2.4-.1-3.6-1.1-4.3-5.6-8.9-11.2-10.3-5.6-1.4-10.9-.2-13.6 2.7-.8.8-1.3 1.8-1.6 3z"></path>
+      </g>
+    </defs>
+  </svg>
+</iron-iconset-svg>
+<iron-iconset-svg name="brand-icons" size="24">
+  <svg>
+    <defs>
+      <g id="googleplus">
+        <path d="M21,10V7h-2v3h-3v2h3v3h2v-3h3v-2H21z M13.3,13.4l-1.1-0.8c-0.4-0.3-0.8-0.7-0.8-1.4c0-0.7,0.5-1.3,1-1.6c1.3-1,2.6-2.1,2.6-4.3c0-2.1-1.3-3.3-2-3.9h1.7L15.9,0H9.7C5.3,0,3.1,2.8,3.1,5.8c0,2.3,1.8,4.8,5,4.8h0.8c-0.1,0.3-0.4,0.8-0.4,1.3c0,1,0.4,1.4,0.9,2c-1.4,0.1-4,0.4-5.9,1.6c-1.8,1.1-2.3,2.6-2.3,3.7c0,2.3,2.1,4.5,6.6,4.5c5.4,0,8-3,8-5.9C15.8,15.7,14.7,14.6,13.3,13.4z M5.7,4.3c0-2.2,1.3-3.2,2.7-3.2c2.6,0,4,3.5,4,5.5c0,2.6-2.1,3.1-2.9,3.1C7,9.7,5.7,6.6,5.7,4.3z M9.3,22.3c-3.3,0-5.4-1.5-5.4-3.7c0-2.2,2-2.9,2.6-3.2c1.3-0.4,3-0.5,3.3-0.5c0.3,0,0.5,0,0.7,0c2.4,1.7,3.4,2.4,3.4,4C13.9,20.8,12,22.3,9.3,22.3z" class="style-scope iron-icon"></path>
+      </g>
+    </defs>
+  </svg>
+</iron-iconset-svg>
 <dom-module id="category-list" assetpath="pages/">
   <template>
     <style is="custom-style" include="app-themes"></style>
-
+    <style>
+    #mainMenu paper-menu {
+      --paper-menu-focused-item: {
+        font-weight: 400;
+      }
+      ;
+      --paper-menu-selected-item: {
+        font-weight: 400;
+      }
+      ;
+    }
+    </style>
     <paper-scroll-header-panel id="scrollHeader" condenses="" keep-condensed-header="" mode="waterfall-tall" on-paper-header-transform="animateTitle">
 
       
-      <paper-toolbar id="mainToolbar" class="tall">
+      <paper-toolbar id="mainToolbar" class="tall main">
 
         <div class="layout horizontal flex">
           <div class="flex"></div>
+
           <paper-menu-button id="mainMenu" horizontal-align="right" vertical-align="top">
+
             <paper-icon-button icon="menu" class="dropdown-trigger"></paper-icon-button>
             <paper-menu class="dropdown-content" style="width:150px">
-              <paper-item>Profile</paper-item>
+              <paper-item on-tap="_profile">Profile</paper-item>
               <paper-item on-tap="_logout">Logout</paper-item>
             </paper-menu>
+
           </paper-menu-button>
+
         </div>
 
 
         
         <div class="middle middle-container center horizontal layout">
+          <user-avatar user="[[user]]"></user-avatar>
           <div class="app-name">Quiz App</div>
         </div>
 
@@ -22779,19 +24715,19 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         <template id="content" is="dom-repeat" items="[[items]]">
 
-          <paper-card elevation="1" on-tap="_categorySelected" class$="{{concatClass('tile flex layout vertical', item.theme)}}" activityid$="[[item.activityId]]">
-            <div class="tileContainer layout fit" id="[[item.activityId]]" style="z-index: 1"> </div>
+          <paper-card elevation="1" on-tap="_categorySelected" class$="[[concatClass('tile flex layout vertical', item.theme)]]" activityid$="[[item.activityId]]">
             <div class="icon layout horizontal center-justified  center flex">
-              <iron-icon icon="{{getCategoryIcon(item.icon)}}"></iron-icon>
+              <iron-icon icon="[[getCategoryIcon(item.icon)]]"></iron-icon>
             </div>
             <div class="tile-footer layout horizontal center">
               <div class="paper-font-body1 layout flex center center-justified">{{item.name}}</div>
               <iron-icon icon="av:play-arrow"></iron-icon>
             </div>
-          </paper-card>
-        </template>
+            <div class="tileContainer layout fit" id="[[item.activityId]]" <="" div="">
+          
+        </div></paper-card></template>
 
-      </div>
+        </div>
 
     </paper-scroll-header-panel>
   </template>
@@ -22814,7 +24750,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           notify: true,
           observer: '_itemsChanged'
         },
-
+        user: {
+          type: Object
+        },
         category: {
           type: String
         },
@@ -22869,7 +24807,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _categorySelected: function(event) {
         var target = event.target;
-
         this.sharedElements = {
           'hero': target.parentElement
         };
@@ -22902,7 +24839,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           name: 'fade-out-animation',
           node: this
         };
+
         this.fire('logout');
+      },
+
+      _profile: function() {
+        this.animationConfig.exit = {
+          name: 'fade-out-animation',
+          node: this
+        };
+
+        this.fire('profile');
       }
 
     });
@@ -22917,7 +24864,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <paper-scroll-header-panel id="scrollHeader" condenses="" keep-condensed-header="" mode="waterfall-tall" on-paper-header-transform="animateTitle">
 
-      <paper-toolbar id="mainToolbar" class$="{{concatClass('tall', category.theme)}}">
+      <paper-toolbar id="mainToolbar" class$="[[concatClass('tall', category.theme)]]">
         <paper-icon-button on-tap="_close" icon="arrow-back"></paper-icon-button>
 
         <span class="flex"></span>
@@ -22932,10 +24879,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <div class="layout horizontal wrap" id="container">
         <template is="dom-repeat" items="[[category.quizes]]">
 
-          <paper-card elevation="1" on-tap="_itemSelected" class$="{{concatClass('tile flex layout vertical', item.theme)}}" id="[[item.activityId]]">
+          <paper-card elevation="1" on-tap="_itemSelected" class$="[[concatClass('tile flex layout vertical', item.theme)]]" id="[[item.activityId]]">
 
             <div class="icon layout horizontal center-justified  center flex">
-              <iron-icon icon="{{getCategoryIcon(item.icon)}}"></iron-icon>
+              <iron-icon icon="[[getCategoryIcon(item.icon)]]"></iron-icon>
             </div>
 
             <div class="tile-footer layout horizontal center">
@@ -23025,12 +24972,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           node: this.$.container
         }];
 
+        var nodeList = Polymer.dom(this.root).querySelectorAll('.tile');
+
         this.animationConfig.exit = [{
           name: 'fade-out-animation',
           node: this.$.mainToolbar,
         }, {
           name: 'fade-out-animation',
-          node: this.$.container
+          nodes: Array.prototype.slice.call(nodeList)
         }];
 
         this.sharedElements = {
@@ -23098,13 +25047,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <div id="placeholder" class$="[[concatClass('layout horizontal fit', quiz.theme)]]"></div>
     <div class="layout vertical fit">
       <paper-toolbar>
-        <paper-icon-button on-tap="_pause" icon="arrow-back" hidden$="[[inResultsView]]"></paper-icon-button>
+        <paper-icon-button on-tap="_pause" icon="arrow-back" hidden$="[[_inResultsView(selected)]]"></paper-icon-button>
       </paper-toolbar>
 
       <neon-animated-pages id="quizPageSelector" selected="{{selected}}" class="flex">
-        <quiz-front-page id="frontPage" quiz="[[quiz]]" wide="[[wide]]" status="[[getQuizStatus()]]" on-quiz-start="_initialize" on-quiz-resume="_resumed" on-close-quiz-view="_close"></quiz-front-page>
-        <question-list quiz="{{quiz}}" wide="[[wide]]" on-quiz-terminated="_terminate" on-quiz-paused="_pause"></question-list>
-        <quiz-results-page quiz="{{quiz}}" wide="[[wide]]" on-close-quiz-view="_close"></quiz-results-page>
+        <quiz-front-page id="frontPage" quiz="[[quiz]]" user="[[user]]" wide="[[wide]]" on-quiz-start="_initialize" on-quiz-resume="_resumed" on-close-quiz-view="_close"></quiz-front-page>
+        <question-list quiz="{{quiz}}" user="{{user}}" wide="[[wide]]" on-quiz-terminated="_terminate" on-quiz-paused="_pause"></question-list>
+        <quiz-results-page quiz="[[quiz]]" user="[[user]]" wide="[[wide]]" on-close-quiz-view="_close"></quiz-results-page>
       </neon-animated-pages>
     </div>
   </template>
@@ -23124,19 +25073,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       ],
 
       properties: {
-        quiz: {
-          type: Object,
-          notify: true,
-          observer: '_quizChanged'
-        },
-        inResultsView: {
-          type: Boolean,
-          default: false
-        },
         selected: {
           type: Number,
-          notify: true,
-          observer: '_selectedChanged'
+          notify: true
         },
 
         animationConfig: {
@@ -23171,7 +25110,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         }
       },
 
-      _quizChanged: function() {
+      quizChanged: function() {
         if (this.quiz) {
           this.selected = 0;
           this.$.frontPage.show();
@@ -23214,6 +25153,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             parent: this.quiz.parent
           }
         });
+
+        this.userTerminateQuiz();
+
         this._next();
       },
 
@@ -23252,8 +25194,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         }
       },
 
-      _selectedChanged: function() {
-        this.inResultsView = (this.selected === 2);
+      _inResultsView: function() {
+        return this.selected === 2;
       }
 
     });
@@ -23279,8 +25221,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </div>
 
         <div class="card-actions">
-          <paper-button on-tap="_start" hidden$="[[_isPaused()]]">Start</paper-button>
-          <paper-button on-tap="_resume" hidden$="[[!_isPaused()]]">Resume</paper-button>
+          <paper-button on-tap="_start" hidden="[[isPaused(user, quiz)]]">Start</paper-button>
+          <paper-button on-tap="_resume" hidden="[[!isPaused(user, quiz)]]">Resume</paper-button>
         </div>
 
       </paper-card>
@@ -23297,21 +25239,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       behaviors: [
         Polymer.NeonSharedElementAnimatableBehavior,
         Polymer.NeonAnimationRunnerBehavior,
+        QuizApp.AppQuizUtilsBehavior,
         QuizApp.AppUtilsBehavior
       ],
 
       properties: {
-        quiz: {
-          type: Object,
-          notify: true
-        },
         wide: {
           type: Object,
           notify: true,
           observer: '_wideChanged'
-        },
-        status: {
-          type: String
         },
 
         animationConfig: {
@@ -23400,10 +25336,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _wideChanged: function() {
         this.toggleClass('flex', this.wide, this.$.paperCardContainer);
-      },
-
-      _isPaused: function() {
-        return this.status === 'paused';
       }
 
     });
@@ -23415,12 +25347,42 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <style is="custom-style" include="app-themes"></style>
     <style>
     .card-header iron-icon {
-      height: 95px;
-      width: 95px;
+      height: 165px!important;
+      width: 165px!important;
     }
 
     .title {
       font-size: 20px;
+    }
+
+    .entry {
+      padding: 16px;
+      border-top: 1px solid var(--paper-grey-200);
+    }
+
+    .entry .icon {
+      min-width: 60px;
+      width: 60px;
+      color: var(--paper-green-500);
+    }
+
+    .entry .icon[result="fail"] {
+      color: var(--paper-red-500);
+    }
+
+    .success {
+      font-size: 50px;
+      font-weight: 300;
+    }
+
+    .total {
+      font-size: 50px;
+      font-weight: 300;
+    }
+
+    .backslash {
+      font-size: 60px;
+      font-weight: 300;
     }
 
     h2 {
@@ -23435,12 +25397,28 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           <div class="layout vertical center center-justified flex">
             <iron-icon icon="[[getCategoryIcon(quiz.icon)]]"></iron-icon>
           </div>
-          <div class="title">{{quiz.name}}</div>
+          <div class="title">[[quiz.name]]</div>
         </div>
 
         <div class="card-content">
-          <h2>Results</h2>
+          <div class="layout horizontal center">
+            <h2 class="flex">Results</h2>
+            <div>
+              <span class="success">[[getSuccessQuestions(user, quiz)]]</span>
+              <span class="backslash">/</span>
+              <span class="total">[[getTotal(quiz)]]</span></div>
+          </div>
         </div>
+
+        <template is="dom-repeat" items="[[quiz.questions]]">
+          <div class="layout horizontal entry">
+            <div class="icon layout horizontal center center-justified" result$="[[getResultTextForQuestion(user, quiz, item)]]">
+              <iron-icon icon="[[getResultIcon(user, quiz, item)]]"></iron-icon>
+            </div>
+            <div>[[item.question]]</div>
+          </div>
+        </template>
+
         <div class="card-actions">
           <paper-button on-tap="_close">Close</paper-button>
         </div>
@@ -23459,15 +25437,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       behaviors: [
         Polymer.NeonSharedElementAnimatableBehavior,
         Polymer.NeonAnimationRunnerBehavior,
+        QuizApp.AppUserUtilsBehavior,
         QuizApp.AppUtilsBehavior
       ],
 
       properties: {
-        quiz: {
-          type: Object,
-          notify: true,
-          observer: '_quizChanged'
-        },
         wide: {
           type: Object,
           notify: true,
@@ -23537,6 +25511,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 </dom-module>
 <dom-module id="question-list" assetpath="pages/">
   <template>
+    <style is="custom-style" include="app-themes"></style>
     <style>
     :host {
       height: 100%;
@@ -23546,34 +25521,54 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       max-width: 500px;
       width: 100%;
       background-color: white;
+      font-weight: 500;
     }
 
     #bottomBar .content {
-      padding: 16px;
+      padding: 12px 16px;
+      font-size: 18px;
+    }
+
+    #bottomBar .name {
+      margin-left: 16px;
+      margin-right: 16px;
+      font-size: 16px;
     }
 
     @media (max-width: 600px) {
       #bottomBar {
+        font-size: 14px;
         max-width: 100%;
       }
+      #bottomBar .name {
+        font-size: 14px;
+      }
+    }
+    paper-progress{
+       --paper-progress-transition-duration: 0.4s;
     }
     </style>
 
     <div class="layout vertical fit" style="overflow: hidden">
 
-      <neon-animated-pages id="questionSelector" class="flex" selected="{{questionIndex}}" entry-animation="[[customEntryAnimation]]" exit-animation="[[customExitAnimation]]">
+      <neon-animated-pages id="questionSelector" class="flex" selected="[[getUserQuestionIndex(user, quiz)]]" entry-animation="[[customEntryAnimation]]" exit-animation="[[customExitAnimation]]">
         <template is="dom-repeat" items="[[quiz.questions]]">
-          <question-element question="[[item]]" quiz="[[quiz]]" index="[[index]]" wide="[[wide]]" on-next="_next" on-prev="_prev" on-quiz-terminated="_changeExitAnimation"></question-element>
+          <question-element question="[[item]]" quiz="[[quiz]]" index="[[index]]" wide="[[wide]]" user="{{user}}" on-next="_next" on-prev="_prev" on-quiz-terminated="_changeExitAnimation"></question-element>
         </template>
       </neon-animated-pages>
 
       <div class="layout vertical end-justified center">
 
         <paper-material id="bottomBar" class="fixed" elevation="2">
+
+          <paper-progress value="[[getUserProgress(user, quiz)]]" class$="[[concatClass('transiting', quiz.theme)]]" style="width: 100%"></paper-progress>
+
           <div class="content layout horizontal center">
-            <div class="flex">{{quiz.name}}</div>
-            <span>{{questionIndex}}</span> / <span>{{length}}</span>
+            <user-avatar size="36" margin="0" user="[[user]]"></user-avatar>
+            <div class="flex name">{{quiz.name}}</div>
+            <span>[[getUserQuestionIndex(user, quiz)]]</span> / <span>{{length}}</span>
           </div>
+
         </paper-material>
 
       </div>
@@ -23590,20 +25585,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       behaviors: [
         Polymer.NeonSharedElementAnimatableBehavior,
         Polymer.NeonAnimationRunnerBehavior,
+        QuizApp.AppUserUtilsBehavior,
         QuizApp.AppUtilsBehavior
       ],
 
       properties: {
-        quiz: {
-          type: Object,
-          notify: true,
-          observer: '_quizChanged'
-        },
-        questionIndex: {
-          type: Number,
-          default: 0,
-          notify: true
-        },
         length: {
           type: Number
         },
@@ -23675,6 +25661,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           this.length = this.quiz.questions.length - 1;
           this.$.questionSelector.selected = 0;
           this.style.visibility = 'visible';
+          Polymer.updateStyles();
         }
       },
 
@@ -23733,28 +25720,30 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         <div class="card-content layout vertical flex">
 
-          <template is="dom-if" if="{{_isSingle(question.type)}}">
-            <paper-radio-group class="layout vertical flex">
-              <template is="dom-repeat" items="{{question.options}}">
-                <paper-radio-button name="{{item}}">{{item}}</paper-radio-button>
-              </template>
-            </paper-radio-group>
-          </template>
+          
+
+          <paper-radio-group selected="{{getSelectedOptionName(user, quiz, question)}}" id="radioGroup" class="layout vertical flex">
+            <template is="dom-repeat" items="{{question.options}}">
+              <paper-radio-button on-tap="_interacted" name="{{item}}">{{item}}</paper-radio-button>
+            </template>
+          </paper-radio-group>
+
+          
 
         </div>
 
         <div class="card-actions">
 
-          <paper-button on-tap="_prev" hidden$="[[_isFirst(index, quiz)]]">
+          <paper-button on-tap="_prev" hidden="[[_isFirst(index, quiz)]]">
             <iron-icon icon="icons:chevron-left"></iron-icon> Prev
           </paper-button>
 
-          <paper-button on-tap="_next" hidden$="[[_notLast(index, quiz)]]">
+          <paper-button on-tap="_next" hidden="[[!_isLast(index, quiz)]]">
             Next
             <iron-icon icon="icons:chevron-right"></iron-icon>
           </paper-button>
 
-          <paper-button on-tap="_terminate" hidden$="{{_isLast(index, quiz)}}">
+          <paper-button on-tap="_terminate" hidden="[[_isLast(index, quiz)]]">
             Finish
           </paper-button>
         </div>
@@ -23774,15 +25763,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       behaviors: [
         Polymer.NeonSharedElementAnimatableBehavior,
         Polymer.NeonAnimationRunnerBehavior,
+        QuizApp.AppUserUtilsBehavior,
         QuizApp.AppUtilsBehavior
       ],
 
       properties: {
         question: {
-          type: Object,
-          notify: true
-        },
-        quiz: {
           type: Object,
           notify: true
         },
@@ -23817,6 +25803,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             parent: this.quiz.activityId
           }
         });
+        this.userStoreIndex(this.index);
       },
 
       terminate: function() {
@@ -23865,6 +25852,19 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         });
       },
 
+      _interacted: function(e) {
+        this.fire('iron-signal', {
+          name: 'interacted',
+          data: {
+            activity: this.question,
+            parent: this.quiz.activityId
+          }
+        });
+        var radioGroup = Polymer.dom(this.root).querySelector('#radioGroup');
+        var selectedIndex = radioGroup.indexOf(e.target);
+        this.userInteractQuestion(e.target.name, selectedIndex);
+      },
+
       _pause: function() {
         this.pause();
         this.fire('quiz-paused');
@@ -23887,13 +25887,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         this.fire('prev');
       },
 
-      _isFirst: function(index, quiz) {
-        return (index === 0) || (index === (quiz.questions.length - 1));
-      },
-
       /* jshint ignore:start */
-      _notLast: function(index, quiz) {
-        return !(index !== (quiz.questions.length - 1));
+      _isFirst: function(index, quiz) {
+        return (index === 0);
       },
 
       _isLast: function(index, quiz) {
@@ -23914,12 +25910,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     <style>
     .background {
       background: var(--paper-cyan-700);
-      opacity: .5
+      overflow: hidden;
+    }
+
+    .container {
+      overflow: auto;
     }
 
     paper-card {
       top: 100px;
       width: 300px;
+      height: 340px;
     }
 
     paper-card {
@@ -23931,18 +25932,29 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     }
 
     paper-card .card-actions paper-button {
-      width: 100%;
       margin-bottom: 5px;
       margin-top: 5px;
-      color: white;
     }
 
     paper-card .card-actions paper-button.login {
-      background-color: var(--paper-green-700);
+      color: var(--paper-blue-700);
     }
 
     paper-card .card-actions paper-button.register {
-      background-color: var(--paper-deep-orange-700);
+      color: var(--paper-grey-800);
+    }
+
+    paper-card .card-actions paper-button.googleplus {
+      background-color: #da4336;
+      font-size: 14px;
+      width: 100%;
+      color: white;
+    }
+
+    paper-card .card-actions paper-button.googleplus iron-icon {
+      margin-right: 5px;
+      --iron-icon-height: 20px;
+      --iron-icon-width: 20px;
     }
 
     @media (max-width: 600px) {
@@ -23955,7 +25967,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <div class="background fit"></div>
 
-    <div class="layout flex horizontal center center-justified">
+    <div class="layout fit horizontal center-justified container">
       <paper-card id="loginPaperCard" elevation="1" heading="Quiz App Login">
         <div class="card-content">
           <paper-input id="email" label="Email" autovalidate="" value="{{email}}" type="email"></paper-input>
@@ -23964,6 +25976,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <div class="card-actions">
           <paper-button on-tap="login" class="login">Enter</paper-button>
           <paper-button on-tap="register" class="register">Register</paper-button>
+        </div>
+        <div class="card-actions">
+          <paper-button on-tap="loginGoogle" class="googleplus">
+            <iron-icon icon="brand-icons:googleplus"></iron-icon>
+            Sign in
+          </paper-button>
         </div>
       </paper-card>
     </div>
@@ -23989,11 +26007,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         email: {
           type: String,
           notify: true,
+          value: 'vilasmaciel@gmail.com',
           observer: '_emailChanged',
         },
         password: {
           type: String,
           notify: true,
+          value: '1234',
           observer: '_passwordChanged',
         },
         form: {
@@ -24029,6 +26049,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           });
         }
         /* jshint ignore:end */
+      },
+
+      loginGoogle: function() {
+        this.fire('login-google');
       },
 
       register: function() {
@@ -24076,6 +26100,431 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   })();
   </script>
 </dom-module>
+<dom-module id="user-avatar" assetpath="pages/">
+  <style>
+  :host {
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid white;
+    --user-avatar-margin: 16px;
+    margin: var(--user-avatar-margin);
+  }
+
+  iron-icon {
+    border-radius: 50%;
+    overflow: hidden;
+    --iron-icon-height: 60px;
+    --iron-icon-width: 60px;
+  }
+  </style>
+  <template>
+    <iron-icon id="icon" icon="[[icon]]" src="[[src]]"></iron-icon>
+  </template>
+
+  <script>
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'user-avatar',
+
+      properties: {
+        user: {
+          type: Object,
+          notify: true,
+          observer: '_userChanged'
+        },
+        src: {
+          type: String,
+          notify: true
+        },
+        icon: {
+          type: String,
+          notify: true
+        },
+        size: {
+          type: Number,
+          notify: true
+        },
+        margin: {
+          type: Number,
+          notify: true
+        }
+      },
+
+      ready: function() {
+        if (this.size !== undefined) {
+          this.$.icon.customStyle['--iron-icon-height'] = this.size + 'px';
+          this.$.icon.customStyle['--iron-icon-width'] = this.size + 'px';
+          Polymer.updateStyles();
+        }
+        if (this.margin !== undefined) {
+          this.customStyle['--user-avatar-margin'] = this.margin + 'px';
+        }
+        Polymer.updateStyles();
+      },
+
+      _userChanged: function() {
+        if (this.user) {
+          if (this.user.avatar) {
+            this.icon = null;
+            this.src = this.user.avatar;
+          } else {
+            this.icon = 'avatar-icons:default';
+            this.src = null;
+          }
+        }
+      }
+
+    });
+  })();
+  </script>
+</dom-module>
+<dom-module id="profile-page" assetpath="pages/">
+  <template>
+    <style>
+    .background {
+      background: var(--paper-cyan-700);
+      overflow: hidden;
+    }
+
+    .container {
+      overflow: auto;
+    }
+
+    paper-toolbar {
+      background-color: transparent;
+    }
+
+    paper-card {
+      width: 500px;
+    }
+
+    user-avatar {
+      margin-right: 16px;
+    }
+
+    .name {
+      font-size: 24px;
+    }
+
+    .email {
+      margin-top: 5px;
+      font-size: 14px;
+      color: var(--paper-grey-700);
+    }
+
+    .aggregated {
+      margin: 0px 16px;
+    }
+
+    .results {
+      margin-top: 16px;
+    }
+
+    .value {
+      font-weight: 300;
+      font-size: 40px;
+    }
+
+    .value span {
+      font-size: 26px;
+    }
+
+    .legend {
+      font-size: 14px;
+      color: var(--paper-grey-700);
+    }
+
+    h2,
+    .category,
+    .quiz {
+      font-weight: 300;
+    }
+
+    .categoryContainer {
+      margin-bottom: 16px;
+    }
+
+    .category {
+      font-size: 20px;
+      margin-top: 7px;
+      margin-bottom: 7px;
+    }
+
+    .quiz {
+      font-size: 18px;
+      margin-left: 16px;
+      margin-bottom: 7px;
+    }
+
+    .attempt {
+      margin-left: 32px;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    @media (max-width: 600px) {
+      paper-card {
+        top: 10px;
+        width: 100%;
+      }
+      .background {
+        background: white!important;
+      }
+      paper-toolbar paper-icon-button {
+        color: black;
+      }
+    }
+    </style>
+
+    <div id="background" class="background fit"></div>
+
+    <div class="container fit">
+
+      <paper-toolbar id="mainToolbar">
+        <paper-icon-button on-tap="_close" icon="arrow-back"></paper-icon-button>
+      </paper-toolbar>
+
+      <div class="layout flex horizontal center center-justified">
+        <paper-card id="loginPaperCard" elevation="1">
+          <div class="card-content">
+
+            <div class="layout horizontal center">
+              <user-avatar user="[[user]]" margin="0"></user-avatar>
+              <div class="layout vertical">
+                <div class="name">[[user.name]]</div>
+                <div class="email">[[user.email]]</div>
+              </div>
+            </div>
+
+            <div class="layout horizontal results">
+              <div class="layout vertical center aggregated">
+                <div class="value">[[progress]]<span>%</span></div>
+                <div class="legend">progress</div>
+              </div>
+              <div class="flex"></div>
+              <div class="layout vertical center aggregated">
+                <div class="value">[[success]]<span>%</span></div>
+                <div class="legend">success</div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="card-actions">
+            <h2>Results</h2>
+
+            <template is="dom-repeat" items="[[results]]">
+              <div class="categoryContainer">
+                <div class="category">[[item.name]]</div>
+
+                <template is="dom-repeat" items="[[item.quizes]]">
+                  <div class="quiz">[[item.name]]</div>
+
+                  <template is="dom-repeat" items="[[item.attempts]]">
+                    <div class="layout horizontal attempt">
+                      <div class="flex">[[item.name]]</div>
+                      <div>[[item.value]]</div>
+                    </div>
+                  </template>
+
+                </template>
+
+              </div>
+            </template>
+
+          </div>
+        </paper-card>
+      </div>
+
+    </div>
+
+  </template>
+
+  <script>
+  (function() {
+    'use strict';
+
+    Polymer({
+      is: 'profile-page',
+
+      behaviors: [
+        Polymer.NeonSharedElementAnimatableBehavior,
+        Polymer.NeonAnimationRunnerBehavior,
+        QuizApp.AppQuizUtilsBehavior
+      ],
+
+      properties: {
+        user: {
+          type: Object,
+          notify: true,
+          observer: 'calculateResults'
+        },
+        categories: {
+          type: Array,
+          notify: true
+        },
+        results: {
+          type: Array,
+          notify: true,
+          default: []
+        },
+        progress: {
+          type: Number,
+          default: 0,
+          notify: true
+        },
+        success: {
+          type: Number,
+          default: 0,
+          notify: true
+        },
+
+        animationConfig: {
+          type: Object,
+          value: function() {
+            return {
+              'entry': {
+                name: 'fade-in-animation',
+                node: this
+              },
+              'exit': [{
+                name: 'fade-out-animation',
+                node: this
+              }, {
+                name: 'transform-animation',
+                transformTo: 'translateY(150%)',
+                node: this.$.loginPaperCard
+              }]
+            };
+          }
+        }
+      },
+
+      ready: function() {
+        this.calculateResults();
+      },
+
+      calculateResults: function() {
+
+        this._calculateProgress();
+        var results = [];
+        var _this = this;
+        if (this.user && _this.user.activities && this.categories) {
+
+          for (var i = 0; i < this.categories.length; i++) {
+            var category = {
+              name: this.categories[i].name,
+              quizes: []
+            };
+
+            for (var j = 0; j < this.categories[i].quizes.length; j++) {
+              var quizId = this.getQuizId(this.categories[i].quizes[j]);
+
+              var attempts = null;
+              if (_this.user.activities[quizId]) {
+                attempts = _this.user.activities[quizId].attempts;
+              }
+
+              var quiz = {
+                name: this.categories[i].quizes[j].name,
+                attempts: []
+              };
+
+              quiz.attempts = this._getAttemptsResults(attempts);
+
+              if (quiz.attempts && quiz.attempts.length) {
+                category.quizes.push(quiz);
+              }
+            }
+
+            results.push(category);
+          }
+
+          this.results = results;
+        }
+      },
+
+      _close: function() {
+        this.fire('close-profile');
+      },
+
+      _getAttemptsResults: function(attempts) {
+        var result = [];
+        if (attempts) {
+          var i = 1;
+          for (var k = attempts.length - 1; k >= 0; k--) {
+            if (attempts[k].status === 'terminated') {
+
+              result.push({
+                name: i + 'º Attempt',
+                value: attempts[k].result + '%'
+              });
+              i++;
+            }
+          }
+          return result;
+        }
+      },
+
+      _calculateProgress: function() {
+        var nQuestions = this._getNumberOfActivities(this.categories);
+        var done = 0;
+        var grade = 0;
+
+        if (this.user && this.user.activities && this.categories) {
+
+          for (var activityId in this.user.activities) {
+            var attempt = this._getLastFinishedAttempt(this.user.activities[activityId]);
+            if (attempt) {
+              done++;
+              grade += attempt.result;
+            }
+          }
+        }
+        if (!done) {
+          this.propertiesgress = 0;
+        } else {
+          this.progress = Math.round(parseFloat(done / nQuestions).toFixed(2) * 100);
+        }
+
+        if (!done) {
+          this.success = 0;
+        } else {
+          this.success = Math.round(parseFloat(grade / done).toFixed(2));
+        }
+
+      },
+
+      _getLastFinishedAttempt: function(activity) {
+        if (activity.attempts) {
+          for (var i = 0; i < activity.attempts.length; i++) {
+            if (activity.attempts[i].status === 'terminated') {
+              return activity.attempts[i];
+            }
+          }
+        }
+
+        return;
+      },
+
+      _getNumberOfActivities: function(categories) {
+        var nq = 0;
+
+        if (categories) {
+          for (var i = 0; i < categories.length; i++) {
+            nq = nq + categories[i].quizes.length;
+          }
+        }
+
+        return nq;
+      }
+    });
+  })();
+  </script>
+</dom-module>
 <dom-module id="app-main" assetpath="/">
   <template>
 
@@ -24083,8 +26532,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <div class="content fit">
       <neon-animated-pages attr-for-selected="data-name" selected="{{section}}" class="fit">
-        <login-page data-name="login" on-login="_login" on-register="_register"></login-page>
-        <category-list data-name="categories" items="[[categories]]" on-category-selected="categorySelected" on-logout="_logout"></category-list>
+        <login-page data-name="login" on-login="_login" on-login-google="_loginGoogle" on-register="_register"></login-page>
+        <profile-page id="profile" data-name="profile" user="{{user}}" categories="[[categories]]" on-close-profile="_showCategoryList"></profile-page>
+        <category-list data-name="categories" items="[[categories]]" user="{{user}}" on-category-selected="categorySelected" on-logout="_logout" on-profile="_profile"></category-list>
         <category-element data-name="category" category="[[_getCategory(category)]]" on-close="_showCategoryList" on-quiz-selected="_quizSelected"></category-element>
         <quiz-element data-name="quiz" quiz="[[quiz]]" user="{{user}}" on-close="_showCategoryElement"></quiz-element>
       </neon-animated-pages>
@@ -24148,6 +26598,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       _showCategoryList: function() {
+        // this.section = 'profile';
         this.section = 'categories';
         this.category = undefined;
       },
@@ -24166,9 +26617,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         this.$.dataProvider.login(loginData.detail);
       },
 
+      _loginGoogle: function() {
+        this.$.dataProvider.loginGoogle();
+      },
+
       _logout: function() {
         this.section = 'login';
         this.$.dataProvider.logout();
+      },
+
+      _profile: function() {
+        this.$.profile.calculateResults();
+        this.section = 'profile';
       },
 
       _register: function(loginData) {
@@ -24223,11 +26683,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           type: Object,
           notify: true,
           observer: '_userChanged'
+        },
+        quizStatus: {
+          type: String,
+          notify: true
         }
       },
 
       created: function() {
-        this.firebase = new Firebase('https://polymer-quiz-app.firebaseio.com');
+        // this.firebase = new Firebase('https://polymer-quiz-app.firebaseio.com');
+        this.firebase = new Firebase('https://quiz-app-dev.firebaseio.com');
       },
 
       attached: function() {
@@ -24240,8 +26705,35 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       login: function(loginData) {
         var _this = this;
-        this.firebase.authWithPassword(loginData, function(err, data) {
-          _this._loginSucess(err, data);
+        this.firebase.authWithPassword(loginData, function(err, authData) {
+          if (err) {
+            _this.fire('app:alert', err);
+          } else {
+            var data = {
+              email: authData.password.email,
+              avatar: authData.password.profileImageURL,
+            };
+            _this._loginSucess(data);
+          }
+        });
+      },
+
+      loginGoogle: function() {
+        var _this = this;
+        this.firebase.authWithOAuthPopup('google', function(err, authData) {
+          if (err) {
+            _this.fire('app:alert', err);
+          } else {
+            var data = {
+              email: authData.google.email,
+              avatar: authData.google.profileImageURL,
+              name: authData.google.displayName
+            };
+            _this._loginSucess(data);
+          }
+        }, {
+          remember: 'sessionOnly',
+          scope: 'email'
         });
       },
 
@@ -24256,40 +26748,44 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         var _this = this;
         this.firebase.createUser(loginData, function(err) {
           if (err) {
-            this.fire('app:alert', err);
+            _this.fire('app:alert', err);
           } else {
             _this.login(loginData);
           }
         });
       },
 
-      _loginSucess: function(error, user) {
-        if (error) {
-          this.fire('app:alert', error);
-        } else {
-          this.userAuth = user;
-          this.saveCookie();
-          this._retrieveUserProfile();
-          this.$.ajaxCategories.generateRequest();
+      _loginSucess: function(user) {
 
-          this.fire('login-success');
-        }
+        this.userAuth = user;
+        this.saveCookie();
+        this._retrieveUserProfile();
+        this.$.ajaxCategories.generateRequest();
+
+        this.fire('login-success');
       },
 
       _retrieveUserProfile: function() {
         var _this = this;
-        var emailKey = this.removeDots(_this.userAuth.password.email);
+        var emailKey = this.removeDots(_this.userAuth.email);
 
-        this.firebase.child('users/' + emailKey).once('value',
+        this.firebase.child('users/' + emailKey).on('value',
           function(snapshot) {
             if (!snapshot.val()) {
               _this.firebase.child('users/' + emailKey).set({
-                email: _this.userAuth.password.email,
-                activities: []
+                email: _this.userAuth.email
               });
 
             } else {
               _this.user = snapshot.val();
+              if (_this.userAuth.avatar) {
+                _this.user.avatar = _this.userAuth.avatar;
+                _this._updateUser(_this.user);
+              }
+              if (_this.userAuth.name) {
+                _this.user.name = _this.userAuth.name;
+                _this._updateUser(_this.user);
+              }
             }
           });
       },
@@ -24300,6 +26796,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _updateUser: function(user) {
         var emailKey = this.removeDots(user.email);
+        // this.user = JSON.parse(JSON.stringify(this.user));
         this.firebase.child('users/' + emailKey).update(user);
       },
 

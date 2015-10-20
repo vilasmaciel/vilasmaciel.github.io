@@ -1,26 +1,42 @@
 <dom-module id="category-list">
   <template>
     <style is="custom-style" include="app-themes"></style>
-
+    <style>
+    #mainMenu paper-menu {
+      --paper-menu-focused-item: {
+        font-weight: 400;
+      }
+      ;
+      --paper-menu-selected-item: {
+        font-weight: 400;
+      }
+      ;
+    }
+    </style>
     <paper-scroll-header-panel id="scrollHeader" condenses keep-condensed-header mode="waterfall-tall" on-paper-header-transform="animateTitle">
 
       <!-- Main Toolbar -->
-      <paper-toolbar id="mainToolbar" class="tall">
+      <paper-toolbar id="mainToolbar" class="tall main">
 
         <div class="layout horizontal flex">
           <div class="flex"></div>
+
           <paper-menu-button id="mainMenu" horizontal-align="right" vertical-align="top">
+
             <paper-icon-button icon="menu" class="dropdown-trigger"></paper-icon-button>
             <paper-menu class="dropdown-content" style="width:150px">
-              <paper-item>Profile</paper-item>
+              <paper-item on-tap="_profile">Profile</paper-item>
               <paper-item on-tap="_logout">Logout</paper-item>
             </paper-menu>
+
           </paper-menu-button>
+
         </div>
 
 
         <!-- Application name -->
         <div class="middle middle-container center horizontal layout">
+          <user-avatar user="[[user]]"></user-avatar>
           <div class="app-name">Quiz App</div>
         </div>
 
@@ -35,19 +51,19 @@
 
         <template id="content" is="dom-repeat" items="[[items]]">
 
-          <paper-card elevation="1" on-tap="_categorySelected" class$="{{concatClass('tile flex layout vertical', item.theme)}}" activityId$="[[item.activityId]]">
-            <div class="tileContainer layout fit" id="[[item.activityId]]" style="z-index: 1"> </div>
+          <paper-card elevation="1" on-tap="_categorySelected" class$="[[concatClass('tile flex layout vertical', item.theme)]]" activityId$="[[item.activityId]]">
             <div class="icon layout horizontal center-justified  center flex">
-              <iron-icon icon="{{getCategoryIcon(item.icon)}}"></iron-icon>
+              <iron-icon icon="[[getCategoryIcon(item.icon)]]"></iron-icon>
             </div>
             <div class="tile-footer layout horizontal center">
               <div class="paper-font-body1 layout flex center center-justified">{{item.name}}</div>
               <iron-icon icon="av:play-arrow"></iron-icon>
             </div>
+            <div class="tileContainer layout fit" id="[[item.activityId]]" </div>
           </paper-card>
         </template>
 
-      </div>
+        </div>
 
     </paper-scroll-header-panel>
   </template>
@@ -70,7 +86,9 @@
           notify: true,
           observer: '_itemsChanged'
         },
-
+        user: {
+          type: Object
+        },
         category: {
           type: String
         },
@@ -125,7 +143,6 @@
 
       _categorySelected: function(event) {
         var target = event.target;
-
         this.sharedElements = {
           'hero': target.parentElement
         };
@@ -158,7 +175,17 @@
           name: 'fade-out-animation',
           node: this
         };
+
         this.fire('logout');
+      },
+
+      _profile: function() {
+        this.animationConfig.exit = {
+          name: 'fade-out-animation',
+          node: this
+        };
+
+        this.fire('profile');
       }
 
     });
