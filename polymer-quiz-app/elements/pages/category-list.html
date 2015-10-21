@@ -121,6 +121,7 @@
       },
 
       show: function() {
+        this.$.scrollHeader.measureHeaderHeight();
         this.style.opacity = 1;
         this.playAnimation('entry');
       },
@@ -133,7 +134,7 @@
           }
         });
         this.$.scrollHeader.measureHeaderHeight();
-
+        this.style.opacity = 0;
         var _this = this;
 
         setTimeout(function() {

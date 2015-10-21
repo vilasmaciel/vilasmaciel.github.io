@@ -24785,6 +24785,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       show: function() {
+        this.$.scrollHeader.measureHeaderHeight();
         this.style.opacity = 1;
         this.playAnimation('entry');
       },
@@ -24797,7 +24798,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           }
         });
         this.$.scrollHeader.measureHeaderHeight();
-
+        this.style.opacity = 0;
         var _this = this;
 
         setTimeout(function() {
@@ -25046,8 +25047,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     <div id="placeholder" class$="[[concatClass('layout horizontal fit', quiz.theme)]]"></div>
     <div class="layout vertical fit">
-      <paper-toolbar>
-        <paper-icon-button on-tap="_pause" icon="arrow-back" hidden$="[[_inResultsView(selected)]]"></paper-icon-button>
+      <paper-toolbar hidden$="[[_inResultsView(selected)]]">
+        <paper-icon-button on-tap="_pause" icon="arrow-back"></paper-icon-button>
       </paper-toolbar>
 
       <neon-animated-pages id="quizPageSelector" selected="{{selected}}" class="flex">
@@ -25346,6 +25347,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <template>
     <style is="custom-style" include="app-themes"></style>
     <style>
+    .container {
+      overflow: auto;
+    }
+
+    @media (min-width: 600px) {
+      #paperCardContainer {
+        top: 64px;
+      }
+    }
+
     .card-header iron-icon {
       height: 165px!important;
       width: 165px!important;
@@ -25390,7 +25401,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     }
     </style>
 
-    <div class="layout vertical fit center start">
+    <div class="layout vertical fit center start container">
       <paper-card elevation="2" id="paperCardContainer" class$="[[concatClass('layout vertical flex', quiz.theme)]]">
 
         <div class="card-header layout vertical flex">
@@ -25544,8 +25555,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         font-size: 14px;
       }
     }
-    paper-progress{
-       --paper-progress-transition-duration: 0.4s;
+
+    paper-progress {
+      --paper-progress-transition-duration: 0.4s;
     }
     </style>
 
@@ -25608,6 +25620,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 transformTo: 'none',
                 node: this.$.questionSelector,
               }, {
+                name: 'fade-in-animation',
+                node: this.$.questionSelector,
+                timing: {
+                  delay: 200
+                }
+              }, {
                 name: 'hero-animation',
                 id: 'hero',
                 toPage: this
@@ -25615,13 +25633,27 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 name: 'fade-in-animation',
                 node: this.$$('#bottomBar .content'),
                 timing: {
-                  delay: 200
+                  delay: 400
+                }
+              }, {
+                name: 'fade-in-animation',
+                node: this.$$('#bottomBar paper-progress'),
+                timing: {
+                  delay: 400
                 }
               }],
               'exit': [{
                 name: 'transform-animation',
                 transformFrom: 'none',
                 transformTo: 'translate(0px, -200vh) scale(0.9, 1)',
+                node: this.$.questionSelector
+              }, {
+                name: 'transform-animation',
+                transformFrom: 'none',
+                transformTo: 'translateY(150%)',
+                node: this.$.bottomBar
+              }, {
+                name: 'fade-out-animation',
                 node: this.$.questionSelector
               }]
             };
@@ -26526,7 +26558,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <dom-module id="app-main" assetpath="/">
   <template>
 
-    <data-provider id="dataProvider" categories="{{categories}}" user="{{user}}" on-login-success="_loginSuccess"></data-provider>
+    <data-provider id="dataProvider" categories="{{categories}}" user="{{user}}" on-login-success="_loginSuccess" on-no-login="_logout"></data-provider>
 
     <div class="content fit">
       <neon-animated-pages attr-for-selected="data-name" selected="{{section}}" class="fit">
@@ -26571,7 +26603,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       ready: function() {
-        this.section = 'login';
         this.messageElement = this.$.message;
       },
 
@@ -26596,7 +26627,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       _showCategoryList: function() {
-        // this.section = 'profile';
         this.section = 'categories';
         this.category = undefined;
       },
@@ -26690,14 +26720,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       created: function() {
         // this.firebase = new Firebase('https://polymer-quiz-app.firebaseio.com');
-        this.firebase = new Firebase('https://polymer-quiz-app.firebaseio.com');
+        this.firebase = new Firebase('https://quiz-app-dev.firebaseio.com');
       },
 
       attached: function() {
         if (this.userAuth) {
-          this.$.ajaxCategories.generateRequest();
-          this._retrieveUserProfile();
-          this.fire('login-success');
+          this._loginSucess();
+        } else {
+          this.fire('no-login');
         }
       },
 
@@ -26754,13 +26784,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       _loginSucess: function(user) {
-
-        this.userAuth = user;
-        this.saveCookie();
+        if (user) {
+          this.userAuth = user;
+          this.saveCookie();
+        }
         this._retrieveUserProfile();
         this.$.ajaxCategories.generateRequest();
-
-        this.fire('login-success');
       },
 
       _retrieveUserProfile: function() {
@@ -26790,6 +26819,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _categoriesResponse: function(event) {
         this.categories = event.detail.response;
+        this.fire('login-success');
       },
 
       _updateUser: function(user) {
