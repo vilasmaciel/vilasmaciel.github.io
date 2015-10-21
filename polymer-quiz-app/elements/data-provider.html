@@ -93,10 +93,14 @@
       },
 
       logout: function() {
-        this.userAuth = null;
-        this.user = null;
-        this.firebase.unauth();
-        this.removeCookie();
+        var _this = this;
+        setTimeout(function() {
+          _this.userAuth = null;
+          _this.user = null;
+          _this.categories = null;
+          _this.firebase.unauth();
+          _this.removeCookie();
+        }, 200);
       },
 
       register: function(loginData) {
