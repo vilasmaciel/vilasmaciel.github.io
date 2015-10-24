@@ -16474,41 +16474,35 @@ QuizApp.AppMessageBehavior = {
 var QuizApp = QuizApp || {};
 
 QuizApp.xAPIManagerBehavior = {
-
+   /* jshint ignore:start */
   initialized: function(data) {
-    data = null;
     // console.log('initialized');
   },
 
   terminated: function(data) {
-    data = null;
     // console.log('terminated');
   },
 
   paused: function(data) {
-    data = null;
     // console.log('paused');
   },
 
   resumed: function(data) {
-    data = null;
     // console.log('resumed');
   },
 
   responded: function(data) {
-    data = null;
     // console.log('responded');
   },
 
   passed: function(data) {
-    data = null;
     // console.log('passed');
   },
 
   failed: function(data) {
-    data = null;
     // console.log('failed');
   }
+   /* jshint ignore:end */
 
 };
 </script>
@@ -16694,7 +16688,7 @@ QuizApp.AppQuizUtilsBehavior = {
   },
 
   getTotal: function(quiz) {
-    if (this.quiz) {
+    if (quiz) {
       return quiz.questions.length;
     }
   },
@@ -24190,11 +24184,44 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       ;
     }
 
+    .tile-list {
+      margin: auto;
+      padding: 0px;
+    }
+
+    .tile-li {
+      display: inline-block;
+      margin: 3px 3px 0px 3px;
+      padding: 0px;
+      width: 32.7%;
+    }
+
+    @media (max-width: 1380px) {
+      .tile-li {
+        width: 32.5%;
+      }
+    }
+
+    @media (max-width: 1050px) {
+      .tile-li {
+        width: 32.2%;
+      }
+    }
+
+    @media (max-width: 860px) {
+      .tile-li {
+        width: 48%;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .tile-li {
+        width: 99%;
+      }
+    }
+
     .tile {
-      min-width: 380px;
-      max-width: 50%;
       height: 300px;
-      margin: 3px;
       cursor: pointer;
     }
 
@@ -24227,13 +24254,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     #paperCardContainer .card-header iron-icon {
       height: 256px;
       width: 256px;
-    }
-
-    @media (max-width: 860px) {
-      .tile {
-        min-width: 250px;
-        max-width: 100%;
-      }
     }
 
     @media (max-width: 600px) {
@@ -24715,22 +24735,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       </paper-toolbar>
 
-      <div class="layout horizontal wrap">
+      <div class="layout horizontal">
+        <ul id="tileList" class="tile-list flex">
+          <template id="content" is="dom-repeat" items="[[items]]">
+            <li class="tile-li flex">
+              <paper-card elevation="1" on-tap="_categorySelected" class$="[[concatClass('tile flex layout vertical', item.theme)]]" activityid$="[[item.activityId]]">
+                <div class="icon layout horizontal center-justified  center flex">
+                  <iron-icon icon="[[getCategoryIcon(item.icon)]]"></iron-icon>
+                </div>
+                <div class="tile-footer layout horizontal center">
+                  <div class="paper-font-body1 layout flex center center-justified">{{item.name}}</div>
+                  <iron-icon icon="av:play-arrow"></iron-icon>
+                </div>
+                <div class="tileContainer layout fit" id="[[item.activityId]]" <="" div="">
+              
+            </div></paper-card></li>
+          </template>
 
-        <template id="content" is="dom-repeat" items="[[items]]">
-
-          <paper-card elevation="1" on-tap="_categorySelected" class$="[[concatClass('tile flex layout vertical', item.theme)]]" activityid$="[[item.activityId]]">
-            <div class="icon layout horizontal center-justified  center flex">
-              <iron-icon icon="[[getCategoryIcon(item.icon)]]"></iron-icon>
-            </div>
-            <div class="tile-footer layout horizontal center">
-              <div class="paper-font-body1 layout flex center center-justified">{{item.name}}</div>
-              <iron-icon icon="av:play-arrow"></iron-icon>
-            </div>
-            <div class="tileContainer layout fit" id="[[item.activityId]]" <="" div="">
-          
-        </div></paper-card></template>
-
+        </ul>
         </div>
 
     </paper-scroll-header-panel>
@@ -24778,17 +24800,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                 name: 'fade-in-animation',
                 node: this
               }],
-              'exit': {
+              'exit': [{
+                name: 'cascaded-animation',
+                animation: 'transform-animation',
+                transformFrom: 'none',
+                transformTo: 'translateY(150%)',
+                nodes: []
+              }, {
                 name: 'fade-out-animation',
-                node: this
-              }
+                node: this.$.tileList
+              }, {
+                name: 'transform-animation',
+                transformTo: 'translateY(-100%)',
+                node: this.$.mainToolbar,
+              }]
             };
           }
         },
 
-        sharedElements: {
-          value: function() {}
-        }
       },
 
       show: function() {
@@ -24798,16 +24827,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       _itemsChanged: function() {
+        var _this = this;
         if (this.items && this.items.length) {
           this.async(function() {
             var nodeList = Polymer.dom(this.root).querySelectorAll('.tile');
             if (nodeList) {
-              this.animationConfig.entry[0].nodes = Array.prototype.slice.call(nodeList);
+              _this.animationConfig.entry[0].nodes = Array.prototype.slice.call(nodeList);
+              _this.animationConfig.exit[0].nodes = Array.prototype.slice.call(nodeList);
             }
           });
 
           this.toggleClass('hidden', true, this.$.scrollHeader);
-          var _this = this;
           setTimeout(function() {
             _this.show();
           }, 200);
@@ -24816,48 +24846,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _categorySelected: function(event) {
         var target = event.target;
-        this.sharedElements = {
-          'hero': target.parentElement
-        };
-
-        this.animationConfig.exit = [{
-          name: 'cascaded-animation',
-          animation: 'scale-down-animation'
-        }, {
-          name: 'hero-animation',
-          id: 'hero',
-          fromPage: this
-        }];
-
-        var nodesToScale = [];
-        var tiles = Polymer.dom(this.root).querySelectorAll('.tile');
-
-        for (var i = 0; i < tiles.length; i++) {
-          var node = tiles[i];
-          if (node.getAttribute('activityId') !== target.getAttribute('activityId')) {
-            nodesToScale.push(node);
-          }
-        }
-
-        this.animationConfig.exit[0].nodes = nodesToScale;
         this.fire('category-selected', target.id);
       },
 
       _logout: function() {
-        this.animationConfig.exit = {
-          name: 'fade-out-animation',
-          node: this
-        };
-
         this.fire('logout');
       },
 
       _profile: function() {
-        this.animationConfig.exit = {
-          name: 'fade-out-animation',
-          node: this
-        };
-
         this.fire('profile');
       }
 
@@ -24886,22 +24882,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
 
       <div class="layout horizontal wrap" id="container">
-        <template is="dom-repeat" items="[[category.quizes]]">
+        <ul class="tile-list flex">
+          <template is="dom-repeat" items="[[category.quizes]]">
+            <li class="tile-li flex">
+              <paper-card elevation="1" on-tap="_itemSelected" class$="[[concatClass('tile flex layout vertical', item.theme)]]" id="[[item.activityId]]">
 
-          <paper-card elevation="1" on-tap="_itemSelected" class$="[[concatClass('tile flex layout vertical', item.theme)]]" id="[[item.activityId]]">
+                <div class="icon layout horizontal center-justified  center flex">
+                  <iron-icon icon="[[getCategoryIcon(item.icon)]]"></iron-icon>
+                </div>
 
-            <div class="icon layout horizontal center-justified  center flex">
-              <iron-icon icon="[[getCategoryIcon(item.icon)]]"></iron-icon>
-            </div>
+                <div class="tile-footer layout horizontal center">
+                  <div class="paper-font-body1 layout flex center center-justified">{{item.name}}</div>
+                  <iron-icon icon="category-icons:play-arrow"></iron-icon>
+                </div>
 
-            <div class="tile-footer layout horizontal center">
-              <div class="paper-font-body1 layout flex center center-justified">{{item.name}}</div>
-              <iron-icon icon="category-icons:play-arrow"></iron-icon>
-            </div>
-
-          </paper-card>
-
-        </template>
+              </paper-card>
+            </li>
+          </template>
+        </ul>
       </div>
 
     </paper-scroll-header-panel>
@@ -24958,21 +24956,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       _setAnimationFromCategoryList: function() {
         this.animationConfig.entry = [{
-          name: 'hero-animation',
-          id: 'hero',
-          toPage: this
-        }, {
           name: 'fade-in-animation',
           timing: {
             delay: 300
           },
-          node: this.$$('.app-name')
-        }, {
-          name: 'fade-in-animation',
-          timing: {
-            delay: 300
-          },
-          node: this.$$('#mainToolbar paper-icon-button')
+          node: this.$.mainToolbar
         }, {
           name: 'fade-in-animation',
           timing: {
@@ -25365,6 +25353,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
     }
 
+    #paperCardContainer .card-header {
+      min-height: 221px;
+    }
+
     .card-header iron-icon {
       height: 165px!important;
       width: 165px!important;
@@ -25372,6 +25364,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     .title {
       font-size: 20px;
+    }
+
+    .card-content {
+      min-height: 103px;
     }
 
     .entry {
@@ -25410,7 +25406,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </style>
 
     <div class="layout vertical fit center start container">
-      <paper-card elevation="2" id="paperCardContainer" class$="[[concatClass('layout vertical flex', quiz.theme)]]">
+      <paper-card elevation="2" id="paperCardContainer" class$="[[concatClass('layout vertical', quiz.theme)]]">
 
         <div class="card-header layout vertical flex">
           <div class="layout vertical center center-justified flex">
@@ -25521,7 +25517,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       _wideChanged: function() {
-        this.toggleClass('flex', this.wide, this.$.paperCardContainer);
+        // this.toggleClass('flex', this.wide, this.$.paperCardContainer);
       }
 
     });
@@ -26019,8 +26015,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </div>
         <div class="card-actions">
           <paper-button on-tap="loginGoogle" class="googleplus">
-            <iron-icon icon="brand-icons:googleplus"></iron-icon>
-            Sign in
+            <iron-icon src="../images/google_whiteg.png"></iron-icon>
+            Sign in with Google
           </paper-button>
         </div>
       </paper-card>
@@ -26424,16 +26420,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           type: Object,
           value: function() {
             return {
-              'entry': {
+              'entry': [{
                 name: 'fade-in-animation',
                 node: this
-              },
+              }, {
+                name: 'transform-animation',
+                transformFrom: 'translateY(100%)',
+                node: this.$.loginPaperCard
+              }],
               'exit': [{
                 name: 'fade-out-animation',
                 node: this
               }, {
                 name: 'transform-animation',
-                transformTo: 'translateY(150%)',
+                transformTo: 'translateY(100%)',
                 node: this.$.loginPaperCard
               }]
             };
@@ -26450,7 +26450,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         this._calculateProgress();
         var results = [];
         var _this = this;
-        if (this.user && _this.user.activities && this.categories) {
+        if (this.categories) {
 
           for (var i = 0; i < this.categories.length; i++) {
             var category = {
@@ -26462,19 +26462,22 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               var quizId = this.getQuizId(this.categories[i].quizes[j]);
 
               var attempts = null;
-              if (_this.user.activities[quizId]) {
-                attempts = _this.user.activities[quizId].attempts;
-              }
+              if (this.user && _this.user.activities) {
 
-              var quiz = {
-                name: this.categories[i].quizes[j].name,
-                attempts: []
-              };
+                if (_this.user.activities[quizId]) {
+                  attempts = _this.user.activities[quizId].attempts;
+                }
 
-              quiz.attempts = this._getAttemptsResults(attempts);
+                var quiz = {
+                  name: this.categories[i].quizes[j].name,
+                  attempts: []
+                };
 
-              if (quiz.attempts && quiz.attempts.length) {
-                category.quizes.push(quiz);
+                quiz.attempts = this._getAttemptsResults(attempts);
+
+                if (quiz.attempts && quiz.attempts.length) {
+                  category.quizes.push(quiz);
+                }
               }
             }
 
@@ -26800,8 +26803,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           this.userAuth = user;
           this.saveCookie();
         }
-        this._retrieveUserProfile();
-        this.$.ajaxCategories.generateRequest();
+
+        if (this.userAuth) {
+          this._retrieveUserProfile();
+          this.$.ajaxCategories.generateRequest();
+        } else {
+          console.error('No userAuth');
+        }
       },
 
       _retrieveUserProfile: function() {
@@ -26812,19 +26820,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           function(snapshot) {
             if (!snapshot.val()) {
               _this.firebase.child('users/' + emailKey).set({
-                email: _this.userAuth.email
+                email: _this.userAuth.email,
+                avatar: _this.userAuth.avatar || 'http://usercontent1.hubimg.com/10576406_f260.jpg',
+                name: _this.userAuth.name || 'No Name'
               });
 
             } else {
               _this.user = snapshot.val();
-              if (_this.userAuth.avatar) {
-                _this.user.avatar = _this.userAuth.avatar;
-                _this._updateUser(_this.user);
-              }
-              if (_this.userAuth.name) {
-                _this.user.name = _this.userAuth.name;
-                _this._updateUser(_this.user);
-              }
             }
           });
       },

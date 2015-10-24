@@ -119,8 +119,13 @@
           this.userAuth = user;
           this.saveCookie();
         }
-        this._retrieveUserProfile();
-        this.$.ajaxCategories.generateRequest();
+
+        if (this.userAuth) {
+          this._retrieveUserProfile();
+          this.$.ajaxCategories.generateRequest();
+        } else {
+          console.error('No userAuth');
+        }
       },
 
       _retrieveUserProfile: function() {
@@ -131,19 +136,13 @@
           function(snapshot) {
             if (!snapshot.val()) {
               _this.firebase.child('users/' + emailKey).set({
-                email: _this.userAuth.email
+                email: _this.userAuth.email,
+                avatar: _this.userAuth.avatar || 'http://usercontent1.hubimg.com/10576406_f260.jpg',
+                name: _this.userAuth.name || 'No Name'
               });
 
             } else {
               _this.user = snapshot.val();
-              if (_this.userAuth.avatar) {
-                _this.user.avatar = _this.userAuth.avatar;
-                _this._updateUser(_this.user);
-              }
-              if (_this.userAuth.name) {
-                _this.user.name = _this.userAuth.name;
-                _this._updateUser(_this.user);
-              }
             }
           });
       },
