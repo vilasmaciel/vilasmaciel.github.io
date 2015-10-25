@@ -16597,6 +16597,14 @@ QuizApp.AppQuizUtilsBehavior = {
       status === 'initialized');
   },
 
+  getStatusIcon: function(userData, quiz) {
+    if (this.isPaused(userData, quiz)) {
+      return 'av:pause';
+    } else {
+      return 'av:play-arrow';
+    }
+  },
+
   getQuizId: function(quiz) {
     if (quiz) {
       var id = quiz.activityId.split('.').join('__');
@@ -24893,7 +24901,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
                 <div class="tile-footer layout horizontal center">
                   <div class="paper-font-body1 layout flex center center-justified">{{item.name}}</div>
-                  <iron-icon icon="category-icons:play-arrow"></iron-icon>
+                  <iron-icon icon="[[getStatusIcon(user, item)]]"></iron-icon>
                 </div>
 
               </paper-card>
@@ -24914,6 +24922,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       behaviors: [
         Polymer.NeonSharedElementAnimatableBehavior,
         Polymer.NeonAnimationRunnerBehavior,
+        QuizApp.AppQuizUtilsBehavior,
         QuizApp.AppUtilsBehavior
       ],
 
@@ -24922,6 +24931,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           type: Object,
           notify: true,
           observer: '_itemsChanged'
+        },
+        user: {
+          type: Object
         },
 
         animationConfig: {
@@ -26392,9 +26404,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       properties: {
         user: {
-          type: Object,
-          notify: true,
-          observer: 'calculateResults'
+          type: Object
         },
         categories: {
           type: Array,
@@ -26439,10 +26449,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             };
           }
         }
-      },
-
-      ready: function() {
-        this.calculateResults();
       },
 
       calculateResults: function() {
@@ -26576,7 +26582,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <login-page data-name="login" on-login="_login" on-login-google="_loginGoogle" on-register="_register"></login-page>
         <profile-page id="profile" data-name="profile" user="{{user}}" categories="[[categories]]" on-close-profile="_showCategoryList"></profile-page>
         <category-list data-name="categories" items="[[categories]]" user="{{user}}" on-category-selected="categorySelected" on-logout="_logout" on-profile="_profile"></category-list>
-        <category-element data-name="category" category="[[_getCategory(category)]]" on-close="_showCategoryList" on-quiz-selected="_quizSelected"></category-element>
+        <category-element data-name="category" category="[[_getCategory(category)]]" user="[[user]]" on-close="_showCategoryList" on-quiz-selected="_quizSelected"></category-element>
         <quiz-element data-name="quiz" quiz="[[quiz]]" user="{{user}}" on-close="_showCategoryElement"></quiz-element>
       </neon-animated-pages>
     </div>
@@ -26730,8 +26736,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       created: function() {
-        this.firebase = new Firebase('https://polymer-quiz-app.firebaseio.com');
-        // this.firebase = new Firebase('https://quiz-app-dev.firebaseio.com');
+        // this.firebase = new Firebase('https://polymer-quiz-app.firebaseio.com');
+        this.firebase = new Firebase('https://quiz-app-dev.firebaseio.com');
       },
 
       attached: function() {
@@ -26789,6 +26795,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       register: function(loginData) {
         var _this = this;
+        loginData.name = 'No Name';
         this.firebase.createUser(loginData, function(err) {
           if (err) {
             _this.fire('app:alert', err);
@@ -26821,7 +26828,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             if (!snapshot.val()) {
               _this.firebase.child('users/' + emailKey).set({
                 email: _this.userAuth.email,
-                avatar: _this.userAuth.avatar || 'http://usercontent1.hubimg.com/10576406_f260.jpg',
+                avatar: _this.userAuth.avatar,
                 name: _this.userAuth.name || 'No Name'
               });
 
@@ -26837,9 +26844,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       _updateUser: function(user) {
+        var _this = this;
         var emailKey = this.removeDots(user.email);
         // this.user = JSON.parse(JSON.stringify(this.user));
-        this.firebase.child('users/' + emailKey).update(user);
+        this.firebase.child('users/' + emailKey).update(user, function(err) {
+          if (err) {
+            console.error(err);
+            _this.fire('app:alert', err);
+          }
+        });
       },
 
       userChanged: function(data) {

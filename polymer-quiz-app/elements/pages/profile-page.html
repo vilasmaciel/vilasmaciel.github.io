@@ -176,9 +176,7 @@
 
       properties: {
         user: {
-          type: Object,
-          notify: true,
-          observer: 'calculateResults'
+          type: Object
         },
         categories: {
           type: Array,
@@ -223,10 +221,6 @@
             };
           }
         }
-      },
-
-      ready: function() {
-        this.calculateResults();
       },
 
       calculateResults: function() {
