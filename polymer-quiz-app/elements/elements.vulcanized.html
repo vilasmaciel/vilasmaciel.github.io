@@ -16800,8 +16800,7 @@ var AppUserUtilsBehaviorImpl = {
     var result = 0;
 
     if (success) {
-      result = parseFloat(success/ total).toFixed(2);
-      console.log(result);
+      result = parseFloat(success / total).toFixed(2);
       result = result * 100;
       result = Math.round(result);
     }
@@ -16809,21 +16808,6 @@ var AppUserUtilsBehaviorImpl = {
     this.user.activities[quizId].attempts[0].success = success;
     this.user.activities[quizId].attempts[0].total = total;
     this.user.activities[quizId].attempts[0].result = result;
-  },
-
-  getUserQuestionIndex: function(userData, quiz) {
-    var quizId = this.getQuizId(quiz);
-    if (userData.activities &&
-      userData.activities[quizId] &&
-      userData.activities[quizId].attempts[0]) {
-      return userData.activities[quizId].attempts[0].index;
-    } else {
-      return 0;
-    }
-  },
-
-  getUserProgress: function(userData, quiz) {
-    return (this.getUserQuestionIndex(userData, quiz) / this.getTotal(quiz)) * 100;
   },
 
   userPauseQuiz: function() {
@@ -16892,6 +16876,50 @@ var AppUserUtilsBehaviorImpl = {
       name: 'user-changed',
       data: this.user
     });
+  },
+
+  getUserQuestionIndex: function(userData, quiz) {
+    var quizId = this.getQuizId(quiz);
+    if (userData.activities &&
+      userData.activities[quizId] &&
+      userData.activities[quizId].attempts[0]) {
+      return userData.activities[quizId].attempts[0].index;
+    } else {
+      return 0;
+    }
+  },
+
+  getUserProgress: function(userData, quiz) {
+    return (this.getUserQuestionIndex(userData, quiz) / this.getTotal(quiz)) * 100;
+  },
+
+  getAttempts: function(userData, quiz) {
+    var quizId = this.getQuizId(quiz);
+
+    if (userData && userData.activities && userData.activities[quizId]) {
+      if (userData.activities[quizId].attempts) {
+        var c = 0;
+        var attempts = userData.activities[quizId].attempts;
+        for (var i = 0; i < attempts.length; i++) {
+          if (attempts[i].status === 'terminated') {
+            c++;
+          }
+        }
+        return c;
+      }
+    }
+    return 0;
+
+  },
+
+  getLastResultValue: function(userData, quiz) {
+    var quizId = this.getQuizId(quiz);
+    if (userData && userData.activities && userData.activities[quizId]) {
+      if (userData.activities[quizId].attempts) {
+        return userData.activities[quizId].attempts[0].result;
+      }
+    }
+    return 0;
   },
 
   _generateUUID: function() {
@@ -24201,7 +24229,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       display: inline-block;
       margin: 3px 3px 0px 3px;
       padding: 0px;
-      width: 32.7%;
+      width: 24.3%;
     }
 
     @media (max-width: 1380px) {
@@ -24229,7 +24257,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     }
 
     .tile {
-      height: 300px;
+      /*height: 300px;*/
       cursor: pointer;
     }
 
@@ -24239,8 +24267,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     }
 
     .tile .icon iron-icon {
-      --iron-icon-height: 256px;
-      --iron-icon-width: 256px;
+      --iron-icon-height: 226px;
+      --iron-icon-width: 226px;
     }
 
     #paperCardContainer {
@@ -24389,6 +24417,46 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     paper-progress.yellow {
       --paper-progress-active-color: var(--paper-yellow-900);
+    }
+    </style></template></dom-module><dom-module id="results" assetpath="../styles/"><template><style>
+    .results {
+      margin-top: 16px;
+    }
+
+    .value {
+      font-weight: 300;
+      font-size: 40px;
+    }
+
+    .value small {
+      font-size: 26px;
+    }
+
+    .legend {
+      font-size: 14px;
+      color: var(--paper-grey-700);
+    }
+
+    .aggregated {
+      margin: 0px 16px;
+    }
+
+    .tile .results {
+      opacity: 0.9;
+      min-width: 110px;
+    }
+
+    .tile .value {
+      font-size: 35px;
+    }
+
+    .tile small {
+      font-size: 20px;
+    }
+
+    .tile .legend {
+      font-size: 13px;
+      color: white;
     }
     </style></template></dom-module><iron-iconset-svg name="category-icons" size="256">
   <svg>
@@ -24874,6 +24942,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <dom-module id="category-element" assetpath="pages/">
   <template>
     <style is="custom-style" include="app-themes"></style>
+    <style is="custom-style" include="results"></style>
+    <style>
+    </style>
 
     <paper-scroll-header-panel id="scrollHeader" condenses="" keep-condensed-header="" mode="waterfall-tall" on-paper-header-transform="animateTitle">
 
@@ -24895,12 +24966,31 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             <li class="tile-li flex">
               <paper-card elevation="1" on-tap="_itemSelected" class$="[[concatClass('tile flex layout vertical', item.theme)]]" id="[[item.activityId]]">
 
-                <div class="icon layout horizontal center-justified  center flex">
-                  <iron-icon icon="[[getCategoryIcon(item.icon)]]"></iron-icon>
+                <div class="icon layout horizontal">
+
+                  <div class="results layout vertical around-justified">
+
+                    <div class="attempts layout vertical center">
+                      <div class="value">
+                        <span>[[getAttempts(user, item)]]</span>/<small>[[item.maxAttempts]]</small>
+                      </div>
+                      <div class="legend">attempts</div>
+                    </div>
+
+                    <div class="result layout vertical center">
+                      <div class="value">
+                        <span>[[getLastResultValue(user, item)]]</span><small>%</small>
+                      </div>
+                      <div class="legend">last result</div>
+                    </div>
+
+                  </div>
+
+                  <iron-icon class="flex" icon="[[getCategoryIcon(item.icon)]]"></iron-icon>
                 </div>
 
                 <div class="tile-footer layout horizontal center">
-                  <div class="paper-font-body1 layout flex center center-justified">{{item.name}}</div>
+                  <div class="paper-font-body1 layout flex center center-justified">[[item.name]]</div>
                   <iron-icon icon="[[getStatusIcon(user, item)]]"></iron-icon>
                 </div>
 
@@ -24922,7 +25012,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       behaviors: [
         Polymer.NeonSharedElementAnimatableBehavior,
         Polymer.NeonAnimationRunnerBehavior,
-        QuizApp.AppQuizUtilsBehavior,
+        QuizApp.AppUserUtilsBehavior,
         QuizApp.AppUtilsBehavior
       ],
 
@@ -26228,6 +26318,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 </dom-module>
 <dom-module id="profile-page" assetpath="pages/">
   <template>
+    <style is="custom-style" include="results"></style>
     <style>
     .background {
       background: var(--paper-cyan-700);
@@ -26256,28 +26347,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
     .email {
       margin-top: 5px;
-      font-size: 14px;
-      color: var(--paper-grey-700);
-    }
-
-    .aggregated {
-      margin: 0px 16px;
-    }
-
-    .results {
-      margin-top: 16px;
-    }
-
-    .value {
-      font-weight: 300;
-      font-size: 40px;
-    }
-
-    .value span {
-      font-size: 26px;
-    }
-
-    .legend {
       font-size: 14px;
       color: var(--paper-grey-700);
     }
@@ -26347,12 +26416,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
             <div class="layout horizontal results">
               <div class="layout vertical center aggregated">
-                <div class="value">[[progress]]<span>%</span></div>
+                <div class="value">[[progress]]<small>%</small></div>
                 <div class="legend">progress</div>
               </div>
               <div class="flex"></div>
               <div class="layout vertical center aggregated">
-                <div class="value">[[success]]<span>%</span></div>
+                <div class="value">[[success]]<small>%</small></div>
                 <div class="legend">success</div>
               </div>
             </div>
@@ -26432,7 +26501,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             return {
               'entry': [{
                 name: 'fade-in-animation',
-                node: this
+                node: this,
+                timing: {
+                  delay: 100
+                }
               }, {
                 name: 'transform-animation',
                 transformFrom: 'translateY(100%)',
@@ -26440,7 +26512,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
               }],
               'exit': [{
                 name: 'fade-out-animation',
-                node: this
+                node: this,
+                timing: {
+                  duration: 200
+                }
               }, {
                 name: 'transform-animation',
                 transformTo: 'translateY(100%)',
